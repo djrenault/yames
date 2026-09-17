@@ -497,6 +497,11 @@ export async function setAudioOutputDevice(deviceName: string | null): Promise<v
   return invoke("set_audio_output_device", { deviceName });
 }
 
+/** 0-indexed output channel to route the click to exclusively, or `null` for all channels. */
+export async function setOutputChannel(channel: number | null): Promise<void> {
+  return invoke("set_output_channel", { channel });
+}
+
 export function onAudioDevicesChanged(callback: (devices: AudioOutputDevice[]) => void) {
   return listen<AudioOutputDevice[]>("audio-devices-changed", (e) => callback(e.payload));
 }

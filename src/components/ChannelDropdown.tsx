@@ -17,25 +17,36 @@ export function channelLabel(index: number, isInterface: boolean): string {
  *
  * No dot indicator — not meaningful for a channel index — but otherwise
  * identical mark-up to AudioInputDropdown / MidiDeviceDropdown.
+ *
+ * `allLabel`, when given, prepends an "all channels" option at value `-1`
+ * (the output-channel picker's "duplicate on every channel" default; the
+ * input-channel picker never passes it, since a capture always reads one
+ * specific channel).
  */
 export function ChannelDropdown({
   channelCount,
   value,
   isInterface,
   onChange,
+  allLabel,
 }: {
   channelCount: number;
   value: number;
   isInterface: boolean;
   onChange: (ch: number) => void;
+  allLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const options = Array.from({ length: channelCount }, (_, i) => ({
-    value: i,
-    label: channelLabel(i, isInterface),
-  }));
+  const options = [
+    ...(allLabel !== undefined ? [{ value: -1, label: allLabel }] : []),
+    ...Array.from({ length: channelCount }, (_, i) => ({
+      value: i,
+      label: channelLabel(i, isInterface),
+    })),
+  ];
+  const selected = options.find((o) => o.value === value) ?? options[0];
 
   useEffect(() => {
     if (!open) return;
@@ -55,9 +66,7 @@ export function ChannelDropdown({
         onClick={() => setOpen((v) => !v)}
         type="button"
       >
-        <span className="midi-dropdown-value">
-          {options[value]?.label ?? options[0]?.label}
-        </span>
+        <span className="midi-dropdown-value">{selected?.label}</span>
         <svg
           className="midi-dropdown-chevron"
           width="12"

@@ -138,6 +138,7 @@
     "devices": {
       "title": "Cihazlar",
       "audioOutput": "Ses Çıkışı",
+      "allChannels": "Tüm kanallar",
       "refreshAudio": "Ses cihazlarını yenile",
       "btLatencyWarning": "Bluetooth ses belirgin gecikme ekler. Görsel ipuçları ve ses tam olarak senkronize olmayabilir.",
       "audioInput": "Ses Girişi",

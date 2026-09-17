@@ -138,6 +138,7 @@
     "devices": {
       "title": "Geräte",
       "audioOutput": "Audio-Ausgabe",
+      "allChannels": "Alle Kanäle",
       "refreshAudio": "Audio-Geräte aktualisieren",
       "btLatencyWarning": "Bluetooth-Audio hat eine spürbare Latenz. Visuelle Hinweise und Ton sind eventuell nicht perfekt synchron.",
       "audioInput": "Audio-Eingang",

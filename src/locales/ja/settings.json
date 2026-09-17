@@ -138,6 +138,7 @@
     "devices": {
       "title": "デバイス",
       "audioOutput": "オーディオ出力",
+      "allChannels": "すべてのチャンネル",
       "refreshAudio": "オーディオデバイスを更新",
       "btLatencyWarning": "Bluetooth オーディオは遅延が大きくなります。視覚的な合図と音が完全には同期しないことがあります。",
       "audioInput": "オーディオ入力",

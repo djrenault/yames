@@ -138,6 +138,7 @@
     "devices": {
       "title": "Urządzenia",
       "audioOutput": "Wyjście audio",
+      "allChannels": "Wszystkie kanały",
       "refreshAudio": "Odśwież urządzenia audio",
       "btLatencyWarning": "Bluetooth dodaje spore opóźnienie. Wskazania wizualne i dźwięk mogą nie być idealnie zsynchronizowane.",
       "audioInput": "Wejście audio",
