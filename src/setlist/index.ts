@@ -13,6 +13,7 @@ export {
   reorderSteps,
   setSetlistCountIn,
   setSetlistRepeat,
+  stateToSetlistStep,
   updateStep,
 } from "./setlists";
 export {

@@ -467,13 +467,22 @@ export async function listSetlists(): Promise<Setlist[]> {
   return legacy;
 }
 
-/** Upsert by id, keeping the existing position. New setlists go last. */
-export async function saveSetlist(setlist: Setlist): Promise<void> {
+/**
+ * Upsert by id, keeping the existing position. New setlists go last.
+ *
+ * Stamps `updatedAt` on every write and returns the stamped setlist, so a
+ * caller that keeps its own copy of the list (the setlist picker, the
+ * sidebar) sorts by an accurate "last modified" without a second read back
+ * from the store.
+ */
+export async function saveSetlist(setlist: Setlist): Promise<Setlist> {
+  const stamped: Setlist = { ...setlist, updatedAt: Date.now() };
   const setlists = await listSetlists();
-  const at = setlists.findIndex((c) => c.id === setlist.id);
-  if (at >= 0) setlists[at] = setlist;
-  else setlists.push(setlist);
+  const at = setlists.findIndex((c) => c.id === stamped.id);
+  if (at >= 0) setlists[at] = stamped;
+  else setlists.push(stamped);
   await storeSave(SETLISTS_KEY, setlists);
+  return stamped;
 }
 
 export async function deleteSetlist(id: string): Promise<void> {

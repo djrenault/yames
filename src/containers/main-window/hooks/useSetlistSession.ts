@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next";
 import {
   addStep,
   createSetlist,
-  presetToSetlistStep,
   renameSetlist as renameSetlistData,
+  stateToSetlistStep,
   updateStep,
   upsertSetlist,
 } from "../../../setlist";
@@ -14,7 +14,7 @@ import {
   saveSetlist as saveSetlistIpc,
 } from "../../../ipc";
 import { meterKey } from "../../../utils/meter";
-import type { AppState, BeatEvent, Setlist, SetlistStep, Preset } from "../../../types";
+import type { AppState, BeatEvent, Setlist, SetlistStep } from "../../../types";
 import { applySetlistStep } from "./applySetlistStep";
 import { useSetlistRunner } from "./useSetlistRunner";
 
@@ -99,25 +99,6 @@ function stateAsStepPatch(state: AppState): Partial<Omit<SetlistStep, "id">> {
   };
 }
 
-/** What the engine is set to, as a preset — the shape `presetToSetlistStep` eats. */
-function stateAsPreset(state: AppState, name: string): Preset {
-  return {
-    id: "",
-    name,
-    createdAt: Date.now(),
-    bpm: state.bpm,
-    subdivision: state.subdivision,
-    timeSignature: state.timeSignature,
-    beatGroups: state.beatGroups,
-    freeMode: state.freeMode,
-    compoundMeter: state.compoundMeter,
-    customPattern: state.customPattern.length > 0 ? [...state.customPattern] : undefined,
-    soundType: state.soundType,
-    volume: state.volume,
-    view: "beat",
-  };
-}
-
 interface UseSetlistSessionArgs {
   state: AppState;
   isPlaying: boolean;
@@ -142,6 +123,8 @@ export function useSetlistSession({
   const [saved, setSaved] = useState<Setlist | null>(null);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [saveFeedback, setSaveFeedback] = useState(false);
+  /** The setlist "Add to setlist" last landed the current state in, or null. */
+  const [addFeedback, setAddFeedback] = useState<string | null>(null);
   /**
    * The player is showing but you asked for the paragraph back.
    *
@@ -282,20 +265,23 @@ export function useSetlistSession({
 
   const newSetlist = useCallback(async () => {
     const created = createSetlist(t("setlist.untitled"));
-    await saveSetlistIpc(created).catch(() => {});
+    const stamped = await saveSetlistIpc(created).catch(() => created);
     // NOT a blind append. The await above is a window — the setlist is in the
     // store by the time it closes, so a `listSetlists()` still in flight can
     // resolve with it already present. See `upsertSetlist`.
-    setSetlists((prev) => upsertSetlist(prev, created));
-    loadSetlist(created);
-    return created;
+    setSetlists((prev) => upsertSetlist(prev, stamped));
+    loadSetlist(stamped);
+    return stamped;
   }, [t, loadSetlist]);
 
   const saveActiveSetlist = useCallback(async () => {
     if (!setlist) return;
-    await saveSetlistIpc(setlist).catch(() => {});
-    setSetlists((prev) => upsertSetlist(prev, setlist));
-    setSaved(setlist);
+    const stamped = await saveSetlistIpc(setlist).catch(() => setlist);
+    setSetlists((prev) => upsertSetlist(prev, stamped));
+    // Both sides carry the same `updatedAt` the store now has, or the dirty
+    // comparison below would never see them agree again.
+    setSetlist(stamped);
+    setSaved(stamped);
     if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
     setSaveFeedback(true);
     feedbackTimer.current = setTimeout(() => setSaveFeedback(false), 1800);
@@ -325,14 +311,65 @@ export function useSetlistSession({
       const target = setlists.find((c) => c.id === id);
       if (!target) return;
       const renamed = renameSetlistData(target, name);
-      await saveSetlistIpc(renamed).catch(() => {});
-      setSetlists((prev) => prev.map((c) => (c.id === id ? renamed : c)));
+      const stamped = await saveSetlistIpc(renamed).catch(() => renamed);
+      setSetlists((prev) => prev.map((c) => (c.id === id ? stamped : c)));
       // A rename is a rename, not an edit: it lands in the working copy and
-      // in the stored one at once, so the bar does not go dirty over it.
-      if (setlist?.id === id) setSetlist((c) => (c ? { ...c, name } : c));
-      if (saved?.id === id) setSaved((c) => (c ? { ...c, name } : c));
+      // in the stored one at once, so the bar does not go dirty over it. Both
+      // sides need the same `updatedAt` the store now has, same as a save.
+      if (setlist?.id === id) setSetlist((c) => (c ? { ...c, name, updatedAt: stamped.updatedAt } : c));
+      if (saved?.id === id) setSaved((c) => (c ? { ...c, name, updatedAt: stamped.updatedAt } : c));
     },
     [setlists, setlist?.id, saved?.id],
+  );
+
+  /**
+   * "Add to setlist" (U9.8) — from the metronome page, not the paragraph.
+   *
+   * Reaching this button means the setlist you are adding to is usually not
+   * the one open in the editor, so this persists straight to the store
+   * rather than going through the dirty/Save/Revert flow a setlist you have
+   * open uses. When the target DOES happen to be the open one, the working
+   * copy and the saved copy both take the stamped result, exactly as
+   * `saveActiveSetlist` does — otherwise the dirty comparison would never
+   * agree again, since only one side picked up the new `updatedAt`.
+   */
+  const addToSetlist = useCallback(
+    async (targetId: string) => {
+      const isOpen = setlist?.id === targetId;
+      const base = isOpen ? setlist : setlists.find((c) => c.id === targetId);
+      if (!base) return null;
+      const name = t("setlist.stepDefaultName", { number: base.steps.length + 1 });
+      const next = addStep(base, stateToSetlistStep(state, name));
+      const stamped = await saveSetlistIpc(next).catch(() => null);
+      if (!stamped) return null;
+      setSetlists((prev) => upsertSetlist(prev, stamped));
+      if (isOpen) {
+        setSetlist(stamped);
+        setSaved(stamped);
+      }
+      if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+      setAddFeedback(stamped.name);
+      feedbackTimer.current = setTimeout(() => setAddFeedback(null), 1800);
+      return stamped;
+    },
+    [state, setlist, setlists, t],
+  );
+
+  /** "Add to setlist" → "+ New setlist": the same button, one step further. */
+  const addToNewSetlist = useCallback(
+    async (name: string) => {
+      const trimmed = name.trim() || t("setlist.untitled");
+      const stepName = t("setlist.stepDefaultName", { number: 1 });
+      const created = createSetlist(trimmed, [stateToSetlistStep(state, stepName)]);
+      const stamped = await saveSetlistIpc(created).catch(() => null);
+      if (!stamped) return null;
+      setSetlists((prev) => upsertSetlist(prev, stamped));
+      if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+      setAddFeedback(stamped.name);
+      feedbackTimer.current = setTimeout(() => setAddFeedback(null), 1800);
+      return stamped;
+    },
+    [state, t],
   );
 
   /**
@@ -353,7 +390,7 @@ export function useSetlistSession({
     const previous = setlist.steps[setlist.steps.length - 1];
     const step = previous
       ? { ...previous, id: crypto.randomUUID(), name }
-      : presetToSetlistStep(stateAsPreset(state, name));
+      : stateToSetlistStep(state, name);
     // The step already is what the engine is playing, so there is nothing to
     // apply — but the mirror must not read that back as an edit, which is
     // the same wait selecting a step opens.
@@ -372,6 +409,8 @@ export function useSetlistSession({
     setlist,
     dirty,
     saveFeedback,
+    /** The setlist name "Add to setlist" last landed the state in, or null. */
+    addFeedback,
     selectedStepId,
     /** The step the controls below the track are editing. */
     selectedStep: setlist?.steps.find((s) => s.id === selectedStepId) ?? null,
@@ -389,6 +428,8 @@ export function useSetlistSession({
     deleteSetlist,
     renameSetlist,
     addStepFromNow,
+    addToSetlist,
+    addToNewSetlist,
     /** 1-based, for the transport's "Start at step 3". */
     startAt: setlist ? selectedIndex + 1 : 0,
     /** True while the setlist is on a step — the player's condition. */

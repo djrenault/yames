@@ -216,6 +216,12 @@ export type Setlist = {
   id: string;
   name: string;
   createdAt: number;
+  /**
+   * Stamped by `saveSetlist` on every write. Absent on a setlist saved
+   * before this existed — the setlist picker falls back to `createdAt`
+   * for those so "last modified" still has something to sort by.
+   */
+  updatedAt?: number;
   steps: SetlistStep[];
   /** 1 = once through. 0 = until stopped. (U9.6) */
   repeat: number;

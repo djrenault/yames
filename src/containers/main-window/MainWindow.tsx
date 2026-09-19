@@ -1109,6 +1109,12 @@ export function MainWindow() {
             setSidebarOpen(true);
             setTimeout(() => sidebarRef.current?.triggerRenameSetlist(id), 150);
           }}
+          addToSetlist={{
+            setlists: setlistSession.setlists,
+            feedback: setlistSession.addFeedback,
+            onAdd: (setlistId) => void setlistSession.addToSetlist(setlistId),
+            onAddNew: (name) => void setlistSession.addToNewSetlist(name),
+          }}
           listening={evaluation.enabled}
           soundOpen={soundOpen}
           setSoundOpen={setSoundOpen}

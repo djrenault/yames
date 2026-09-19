@@ -8,7 +8,7 @@
  * store on each of them would be the sidebar's decision to make, not this
  * module's.
  */
-import type { Setlist, SetlistStep, Preset } from "../types";
+import type { AppState, Setlist, SetlistStep, Preset } from "../types";
 import { presetBeatGroups, presetFreeMode } from "../utils/meter";
 
 /**
@@ -53,6 +53,31 @@ export function presetToSetlistStep(
     volume: preset.volume,
     trigger: gap?.trigger ?? DEFAULT_TRIGGER,
     transition: gap?.transition ?? DEFAULT_TRANSITION,
+  };
+}
+
+/**
+ * "Add what the metronome is set to now, as a step."
+ *
+ * The live-state sibling of `presetToSetlistStep`: no legacy shape to
+ * resolve, since `AppState` always carries a real `beatGroups` and
+ * `freeMode`, so it copies them straight across rather than going through
+ * `presetBeatGroups`/`presetFreeMode`.
+ */
+export function stateToSetlistStep(state: AppState, name: string): SetlistStep {
+  return {
+    id: newId(),
+    name,
+    bpm: state.bpm,
+    subdivision: state.subdivision,
+    beatGroups: [...(state.beatGroups ?? [state.timeSignature])],
+    freeMode: state.freeMode ?? false,
+    compoundMeter: state.compoundMeter,
+    customPattern: state.customPattern.length > 0 ? [...state.customPattern] : undefined,
+    soundType: state.soundType,
+    volume: state.volume,
+    trigger: DEFAULT_TRIGGER,
+    transition: DEFAULT_TRANSITION,
   };
 }
 
