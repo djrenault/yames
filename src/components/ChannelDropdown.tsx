@@ -36,6 +36,7 @@ export function ChannelDropdown({
     value: i,
     label: channelLabel(i, isInterface),
   }));
+  const selected = options.find((o) => o.value === value) ?? options[0];
 
   useEffect(() => {
     if (!open) return;
@@ -55,9 +56,7 @@ export function ChannelDropdown({
         onClick={() => setOpen((v) => !v)}
         type="button"
       >
-        <span className="midi-dropdown-value">
-          {options[value]?.label ?? options[0]?.label}
-        </span>
+        <span className="midi-dropdown-value">{selected?.label}</span>
         <svg
           className="midi-dropdown-chevron"
           width="12"

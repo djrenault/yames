@@ -138,6 +138,7 @@
     "devices": {
       "title": "设备",
       "audioOutput": "音频输出",
+      "allChannels": "所有声道",
       "refreshAudio": "刷新音频设备",
       "btLatencyWarning": "蓝牙音频有明显延迟。视觉提示与声音可能无法完美同步。",
       "audioInput": "音频输入",

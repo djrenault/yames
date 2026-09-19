@@ -7,6 +7,7 @@ import {
   getCalibrationCacheEntry,
   listAudioOutputDevices,
   setAudioOutputDevice,
+  setOutputChannels,
 } from "../../ipc";
 import type { CalibrationCacheEntry } from "../../ipc";
 import { AudioOutputDropdown } from "../../components/AudioOutputDropdown";
@@ -46,6 +47,8 @@ export function DevicesSettingsSection({
   setAudioOutputDevices,
   selectedOutputDevice,
   setSelectedOutputDevice,
+  selectedOutputChannels,
+  setSelectedOutputChannels,
   evaluation,
   midi,
   onOpenInputTest,
@@ -55,6 +58,8 @@ export function DevicesSettingsSection({
   setAudioOutputDevices: Dispatch<SetStateAction<AudioOutputDevice[]>>;
   selectedOutputDevice: string;
   setSelectedOutputDevice: Dispatch<SetStateAction<string>>;
+  selectedOutputChannels: number[];
+  setSelectedOutputChannels: Dispatch<SetStateAction<number[]>>;
   evaluation: EvaluationLike;
   midi: MidiLike;
   onOpenInputTest: () => void;
@@ -66,6 +71,11 @@ export function DevicesSettingsSection({
     (d) => d.name === evaluation.selectedDevice,
   );
   const deviceChannelCount = selectedInputDevice?.channels ?? 0;
+  // Find the selected output device object to read its channel count.
+  const selectedOutputDeviceObj = audioOutputDevices.find(
+    (d) => d.name === selectedOutputDevice,
+  );
+  const outputChannelCount = selectedOutputDeviceObj?.channels ?? 0;
   // Per-instrument calibration cache lookup. We re-fetch whenever the
   // active `(instrument, audio input)` pair changes so the displayed
   // value tracks what start_evaluation would actually use next session.
@@ -104,6 +114,12 @@ export function DevicesSettingsSection({
             onChange={(val) => {
               setSelectedOutputDevice(val);
               setAudioOutputDevice(val || null);
+              // Channel indices chosen for the old device may not exist on
+              // the new one — reset to "all channels" rather than carry a
+              // stale selection across (mirrors selectDevice's channel
+              // reset on the audio-input side).
+              setSelectedOutputChannels([]);
+              setOutputChannels([]);
             }}
           />
           <button
@@ -125,6 +141,43 @@ export function DevicesSettingsSection({
               <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
             <span>{t("settings.devices.btLatencyWarning")}</span>
+          </div>
+        )}
+        {/* Output channel picker — shown for any multi-channel device
+            (≥ 2 ch). "All channels" (the default) duplicates the click
+            onto every channel; checking one or more specific channels
+            routes it there exclusively, e.g. just channel 3 of an audio
+            interface, or channels 3+4 together. */}
+        {outputChannelCount > 1 && (
+          <div className="output-channel-chips" style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              className={`output-channel-chip ${selectedOutputChannels.length === 0 ? "active" : ""}`}
+              aria-pressed={selectedOutputChannels.length === 0}
+              onClick={() => {
+                setSelectedOutputChannels([]);
+                setOutputChannels([]);
+              }}
+            >
+              {t("settings.devices.allChannels")}
+            </button>
+            {Array.from({ length: outputChannelCount }, (_, ch) => (
+              <button
+                key={ch}
+                type="button"
+                className={`output-channel-chip ${selectedOutputChannels.includes(ch) ? "active" : ""}`}
+                aria-pressed={selectedOutputChannels.includes(ch)}
+                onClick={() => {
+                  const next = selectedOutputChannels.includes(ch)
+                    ? selectedOutputChannels.filter((c) => c !== ch)
+                    : [...selectedOutputChannels, ch];
+                  setSelectedOutputChannels(next);
+                  setOutputChannels(next);
+                }}
+              >
+                {`Ch ${ch + 1}`}
+              </button>
+            ))}
           </div>
         )}
       </div>

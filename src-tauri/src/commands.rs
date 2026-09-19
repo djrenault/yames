@@ -1901,6 +1901,27 @@ pub fn set_audio_output_device(
     }
 }
 
+#[tauri::command]
+pub fn set_output_channels(
+    channels: Vec<usize>,
+    state: State<SharedState>,
+    engine_state: State<EngineState>,
+    app_handle: AppHandle,
+) {
+    // Persist the choice. Empty means "all channels" (the default).
+    use tauri_plugin_store::StoreExt;
+    if let Ok(store) = app_handle.store("settings.json") {
+        store.set("audioOutputChannels", serde_json::json!(channels));
+    }
+
+    let mut engine = engine_state.0.lock().unwrap();
+    if let Err(e) = engine.set_output_channels(channels, state.inner().clone(), app_handle) {
+        // Same non-fatal handling as `set_audio_output_device`: the audio
+        // thread reports a failed reopen itself.
+        eprintln!("[yames] switching audio output channels failed: {e}");
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Model download management
 // ---------------------------------------------------------------------------

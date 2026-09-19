@@ -369,6 +369,8 @@ export function MainWindow() {
     setAudioOutputDevices,
     selectedOutputDevice,
     setSelectedOutputDevice,
+    selectedOutputChannels,
+    setSelectedOutputChannels,
   } = useAudioOutputDevices();
   // Auto-update preference, app version, banner status, and the
   // "Check now" callback — owned by a dedicated hook that hydrates the
@@ -1266,6 +1268,8 @@ export function MainWindow() {
             setAudioOutputDevices={setAudioOutputDevices}
             selectedOutputDevice={selectedOutputDevice}
             setSelectedOutputDevice={setSelectedOutputDevice}
+            selectedOutputChannels={selectedOutputChannels}
+            setSelectedOutputChannels={setSelectedOutputChannels}
             evaluation={evaluation}
             midi={midi}
             onOpenInputTest={() => setInputTestOpen(true)}

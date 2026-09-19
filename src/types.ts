@@ -210,6 +210,8 @@ export type AudioOutputDevice = {
   name: string;
   isDefault: boolean;
   isBluetooth: boolean;
+  /** Max output channel count across the device's supported configs. */
+  channels: number;
 };
 
 // ---------------------------------------------------------------------------

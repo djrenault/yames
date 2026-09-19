@@ -138,6 +138,7 @@
     "devices": {
       "title": "Dispositivos",
       "audioOutput": "Salida de audio",
+      "allChannels": "Todos los canales",
       "refreshAudio": "Actualizar dispositivos de audio",
       "btLatencyWarning": "El audio Bluetooth añade mucha latencia. Las señales visuales y el sonido pueden no ir perfectamente sincronizados.",
       "audioInput": "Entrada de audio",

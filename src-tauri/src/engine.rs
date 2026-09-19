@@ -980,6 +980,10 @@ pub struct AudioOutputDevice {
     pub is_default: bool,
     #[serde(rename = "isBluetooth")]
     pub is_bluetooth: bool,
+    /// Max channel count across all of the device's supported output
+    /// configs (not just the default) — mirrors `AudioDevice::channels` on
+    /// the input side, which is what surfaces a Scarlett's channels 3/4.
+    pub channels: u16,
 }
 
 /// List all available audio output devices.
@@ -997,9 +1001,20 @@ pub fn list_output_devices() -> Vec<AudioOutputDevice> {
                 let lower = name.to_lowercase();
                 let is_bluetooth = BLUETOOTH_PATTERNS.iter().any(|p| lower.contains(p))
                     || is_bluetooth_transport(&name);
+                let channels = device
+                    .supported_output_configs()
+                    .ok()
+                    .and_then(|cfgs| cfgs.map(|c| c.channels()).max())
+                    .unwrap_or_else(|| {
+                        device
+                            .default_output_config()
+                            .map(|c| c.channels())
+                            .unwrap_or(0)
+                    });
                 devices.push(AudioOutputDevice {
                     is_default: name == default_name,
                     is_bluetooth,
+                    channels,
                     name,
                 });
             }
@@ -1481,6 +1496,10 @@ pub struct MetronomeEngine {
     thread_handle: Option<thread::JoinHandle<()>>,
     beat_log: BeatLog,
     device_name: Option<String>,
+    /// 0-indexed output channels the click is routed to exclusively.
+    /// Empty is the original behavior: the mono click is duplicated onto
+    /// every channel the device config exposes.
+    output_channels: Vec<usize>,
     /// Shared adaptive accuracy score (0-100), updated by timing analyzer callback
     adaptive_score: Arc<AtomicU32>,
     /// Callback timing sink. `None` in the app — only `click-jitter-probe`
@@ -1507,6 +1526,7 @@ impl MetronomeEngine {
             thread_handle: None,
             beat_log,
             device_name: None,
+            output_channels: Vec::new(),
             adaptive_score: Arc::new(AtomicU32::new(0)),
             callback_probe: None,
             tempo_ctx: None,
@@ -1583,6 +1603,36 @@ impl MetronomeEngine {
         self.device_name.as_deref()
     }
 
+    /// Set the output channels the click is routed to. Empty restores the
+    /// default (duplicated onto every channel). If the engine is running,
+    /// it is restarted — same rationale as `set_device`.
+    pub fn set_output_channels(
+        &mut self,
+        channels: Vec<usize>,
+        state: SharedState,
+        app_handle: AppHandle,
+    ) -> Result<(), String> {
+        eprintln!("[yames] Setting audio output channels: {:?}", channels);
+        let was_playing = self.playing.load(Ordering::SeqCst);
+        self.output_channels = channels;
+        self.shutdown();
+        self.alive = Arc::new(AtomicBool::new(false));
+        self.playing = Arc::new(AtomicBool::new(was_playing));
+        thread::sleep(Duration::from_millis(100));
+        self.ensure_thread(state, Some(app_handle), SetupWait::No)
+    }
+
+    /// Set the output channels without restarting (for startup/restore).
+    pub fn set_output_channels_value(&mut self, channels: Vec<usize>) {
+        self.output_channels = channels;
+    }
+
+    /// Get the current output channels (0-indexed), empty for "all
+    /// channels".
+    pub fn output_channels(&self) -> &[usize] {
+        &self.output_channels
+    }
+
     /// Get a clone of the adaptive score Arc for external updates.
     pub fn adaptive_score(&self) -> Arc<AtomicU32> {
         self.adaptive_score.clone()
@@ -1622,6 +1672,7 @@ impl MetronomeEngine {
         let playing = self.playing.clone();
         let beat_log = self.beat_log.clone();
         let device_name = self.device_name.clone();
+        let output_channels = self.output_channels.clone();
         let adaptive_score = self.adaptive_score.clone();
         let callback_probe = self.callback_probe.clone();
         let app_handle = EventSink(app_handle);
@@ -1701,9 +1752,59 @@ impl MetronomeEngine {
                 }
             };
 
-            let sample_rate = supported.sample_rate().0;
-            let channels = supported.channels() as usize;
-            let config: cpal::StreamConfig = supported.into();
+            let default_channels = supported.channels();
+            let default_sr = supported.sample_rate();
+            // If the highest requested output channel exceeds what the
+            // default config exposes, search for a supported config that
+            // provides enough channels at the same sample rate. Mirrors
+            // `AudioInput::start`'s widening for Scarlett loopback input
+            // channels 3/4, which are absent from the default config but
+            // present in `supported_output_configs()`.
+            let needed = output_channels
+                .iter()
+                .copied()
+                .max()
+                .map(|c| (c as u16).saturating_add(1))
+                .unwrap_or(0);
+            let out_channels = if needed > default_channels {
+                device
+                    .supported_output_configs()
+                    .ok()
+                    .and_then(|cfgs| {
+                        cfgs.filter(|c| {
+                            c.channels() >= needed
+                                && c.min_sample_rate() <= default_sr
+                                && c.max_sample_rate() >= default_sr
+                        })
+                        .map(|c| c.channels())
+                        .min() // fewest channels that satisfies the request
+                    })
+                    .unwrap_or(default_channels)
+            } else {
+                default_channels
+            };
+            // Drop any requested channel index the stream's actual channel
+            // count can't back — a stale index (device swapped for one with
+            // fewer channels) falls back to duplicating on every channel
+            // rather than silently dropping the click. Folded into a
+            // bitmask once here rather than a `Vec` the callback would have
+            // to scan per channel per frame.
+            let output_channel_mask: Option<u64> = {
+                let mask = output_channels
+                    .iter()
+                    .copied()
+                    .filter(|&c| c < out_channels as usize && c < 64)
+                    .fold(0u64, |m, c| m | (1u64 << c));
+                if mask == 0 { None } else { Some(mask) }
+            };
+
+            let sample_rate = default_sr.0;
+            let channels = out_channels as usize;
+            let config = cpal::StreamConfig {
+                channels: out_channels,
+                sample_rate: default_sr,
+                buffer_size: cpal::BufferSize::Default,
+            };
 
             // Pre-decode all sounds at the output sample rate
             let sounds = SoundBank::new(sample_rate);
@@ -2047,10 +2148,22 @@ impl MetronomeEngine {
                             voice.position += 1;
                         }
 
-                        // Write to all output channels (mono -> duplicated)
+                        // Write to the selected output channels only, or
+                        // duplicate onto every channel (mono -> all) when
+                        // no specific channels were requested.
                         let clamped = mix.clamp(-1.0, 1.0);
-                        for ch in 0..channels {
-                            data[frame_idx * channels + ch] = clamped;
+                        match output_channel_mask {
+                            Some(mask) => {
+                                for ch in 0..channels {
+                                    data[frame_idx * channels + ch] =
+                                        if (mask >> ch) & 1 == 1 { clamped } else { 0.0 };
+                                }
+                            }
+                            None => {
+                                for ch in 0..channels {
+                                    data[frame_idx * channels + ch] = clamped;
+                                }
+                            }
                         }
 
                         sample_counter += 1;

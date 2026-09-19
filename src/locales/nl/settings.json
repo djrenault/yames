@@ -138,6 +138,7 @@
     "devices": {
       "title": "Apparaten",
       "audioOutput": "Audio-uitvoer",
+      "allChannels": "Alle kanalen",
       "refreshAudio": "Audio-apparaten vernieuwen",
       "btLatencyWarning": "Bluetooth-audio voegt flink wat vertraging toe. Visuele aanwijzingen en geluid lopen mogelijk niet perfect synchroon.",
       "audioInput": "Audio-invoer",

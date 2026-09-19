@@ -28,6 +28,9 @@ export interface AudioOutputDevicesState {
   setAudioOutputDevices: Dispatch<SetStateAction<AudioOutputDevice[]>>;
   selectedOutputDevice: string;
   setSelectedOutputDevice: Dispatch<SetStateAction<string>>;
+  /** 0-indexed output channels; empty means "all channels" (the default). */
+  selectedOutputChannels: number[];
+  setSelectedOutputChannels: Dispatch<SetStateAction<number[]>>;
 }
 
 export function useAudioOutputDevices(): AudioOutputDevicesState {
@@ -35,6 +38,7 @@ export function useAudioOutputDevices(): AudioOutputDevicesState {
     AudioOutputDevice[]
   >([]);
   const [selectedOutputDevice, setSelectedOutputDevice] = useState<string>("");
+  const [selectedOutputChannels, setSelectedOutputChannels] = useState<number[]>([]);
 
   // Mount: hydrate device list + persisted selection.
   useEffect(() => {
@@ -43,6 +47,15 @@ export function useAudioOutputDevices(): AudioOutputDevicesState {
       setAudioOutputDevices(devices);
       const savedDevice = await storeLoad<string>("audioOutputDevice");
       if (savedDevice) setSelectedOutputDevice(savedDevice);
+      // Prefer the multi-select array; fall back to the old single-channel
+      // key so a selection saved before multi-select shipped isn't lost.
+      const savedChannels = await storeLoad<number[]>("audioOutputChannels");
+      if (Array.isArray(savedChannels)) {
+        setSelectedOutputChannels(savedChannels);
+      } else {
+        const legacyChannel = await storeLoad<number>("audioOutputChannel");
+        if (typeof legacyChannel === "number") setSelectedOutputChannels([legacyChannel]);
+      }
     })();
   }, []);
 
@@ -70,5 +83,7 @@ export function useAudioOutputDevices(): AudioOutputDevicesState {
     setAudioOutputDevices,
     selectedOutputDevice,
     setSelectedOutputDevice,
+    selectedOutputChannels,
+    setSelectedOutputChannels,
   };
 }

@@ -58,6 +58,7 @@ use commands::{
     close_open_segment, notify_settings_change, open_url, reorder_presets, save_drill_run, save_preset, save_session,
     save_window_position, set_active_tab, set_always_on_top,
     set_audio_output_device, set_bpm, set_calibration_offset, set_input_gain, set_instrument,
+    set_output_channels,
     set_beat_groups, set_free_mode, set_midi_binding, set_playing, set_sound_type, set_subdivision, set_theme,
     app_ready, set_volume, set_widget_always_on_top, set_widget_mode, show_floating, show_main,
     start_evaluation, start_model_download, start_playback, start_recording, start_speed_ramp,
@@ -264,11 +265,23 @@ pub fn run() {
             // command that called it to learn that and clear it.
             engine.set_tempo_context(tempo_ctx);
 
-            // Restore saved audio output device
+            // Restore saved audio output device + channel
             {
                 let store = app.store("settings.json")?;
                 if let Some(device_name) = store.get("audioOutputDevice").and_then(|v| v.as_str().map(String::from)) {
                     engine.set_device_name(Some(device_name));
+                }
+                // Prefer the new multi-select array; fall back to the old
+                // single-channel key so anyone who saved a selection before
+                // multi-select shipped doesn't lose it.
+                if let Some(channels) = store.get("audioOutputChannels").and_then(|v| {
+                    v.as_array().map(|arr| {
+                        arr.iter().filter_map(|x| x.as_u64()).map(|x| x as usize).collect::<Vec<_>>()
+                    })
+                }) {
+                    engine.set_output_channels_value(channels);
+                } else if let Some(channel) = store.get("audioOutputChannel").and_then(|v| v.as_u64()) {
+                    engine.set_output_channels_value(vec![channel as usize]);
                 }
             }
 
@@ -607,6 +620,7 @@ pub fn run() {
             set_input_gain,
             list_audio_output_devices,
             set_audio_output_device,
+            set_output_channels,
             get_model_status,
             get_system_memory_mb,
             write_model_chunk,

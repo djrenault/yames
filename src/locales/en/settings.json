@@ -138,6 +138,7 @@
     "devices": {
       "title": "Devices",
       "audioOutput": "Audio Output",
+      "allChannels": "All channels",
       "refreshAudio": "Refresh audio devices",
       "btLatencyWarning": "Bluetooth audio adds significant latency. Visual cues and sound may not sync perfectly.",
       "audioInput": "Audio Input",

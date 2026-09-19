@@ -138,6 +138,7 @@
     "devices": {
       "title": "Thiết bị",
       "audioOutput": "Âm thanh đầu ra",
+      "allChannels": "Tất cả các kênh",
       "refreshAudio": "Làm mới thiết bị âm thanh",
       "btLatencyWarning": "Âm thanh Bluetooth có độ trễ đáng kể. Tín hiệu thị giác và âm thanh có thể không khớp hoàn toàn.",
       "audioInput": "Âm thanh đầu vào",
