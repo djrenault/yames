@@ -219,7 +219,9 @@ export function SetlistPlayer({
             <span className="setlist-player-next-said">
               {t("setlist.said.config", {
                 bpm: next.bpm,
-                meter: next.freeMode ? t("metronome.free") : meterLabel(next.beatGroups),
+                meter: next.freeMode
+                  ? t("metronome.free")
+                  : meterLabel(next.beatGroups, next.compoundMeter ?? false),
                 subdivision: t(`subdiv.${next.subdivision}`).toLowerCase(),
                 sound: t(`sound.${next.soundType}`).toLowerCase(),
               })}

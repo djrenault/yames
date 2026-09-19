@@ -392,7 +392,7 @@ export function FullscreenView({ state, currentBeat, activeTab, onExit }: Fullsc
           }}>
             {state.freeMode
               ? t("metronome.freeBeatCount", { count: meterBeats })
-              : meterLabel(state.beatGroups ?? [state.timeSignature])}
+              : meterLabel(state.beatGroups ?? [state.timeSignature], state.compoundMeter)}
           </button>
         )}
         {activeTab !== "drill" && (

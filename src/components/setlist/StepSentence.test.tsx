@@ -87,7 +87,11 @@ describe("the meter window", () => {
     const { onChange } = draw();
     await userEvent.click(phrase("4/4"));
     await userEvent.click(screen.getByText("FREE"));
-    expect(onChange).toHaveBeenCalledWith({ freeMode: true });
+    expect(onChange).toHaveBeenCalledWith({
+      freeMode: true,
+      compoundMeter: false,
+      customPattern: [],
+    });
   });
 
   it("marks FREE as the one you are in, and the presets as not", async () => {
@@ -96,6 +100,28 @@ describe("the meter window", () => {
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("FREE").closest("button")!.getAttribute("aria-pressed")).toBe("true");
     expect(within(dialog).getByText("4/4").closest("button")!.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("marks a step's compound meter when a compound preset is picked, so 6/8 plays as real 6/8", async () => {
+    const { onChange } = draw();
+    await userEvent.click(phrase("4/4"));
+    await userEvent.click(within(screen.getByRole("dialog")).getByText("6/8"));
+    expect(onChange).toHaveBeenCalledWith({
+      beatGroups: [3, 3],
+      freeMode: false,
+      compoundMeter: true,
+      customPattern: [],
+    });
+  });
+
+  it("reads a step's own compoundMeter flag when deciding which preset is active", async () => {
+    // [3] is 3/4 as an ordinary meter and 3/8 as a compound one — only the
+    // flag on the step tells them apart.
+    draw({ beatGroups: [3], compoundMeter: true });
+    await userEvent.click(phrase("3/8"));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("3/8").closest("button")!.getAttribute("aria-pressed")).toBe("true");
+    expect(within(dialog).getByText("3/4").closest("button")!.getAttribute("aria-pressed")).toBe("false");
   });
 
   it("lets you set the beat count without dropping out of FREE", async () => {

@@ -96,7 +96,9 @@ export function StepSentence({
   const toggle = (key: Exclude<Field, null>) => () =>
     setOpen((current) => (current === key ? null : key));
 
-  const meter = step.freeMode ? t("metronome.free") : meterLabel(step.beatGroups);
+  const meter = step.freeMode
+    ? t("metronome.free")
+    : meterLabel(step.beatGroups, step.compoundMeter ?? false);
   const beats = meterTotal(step.beatGroups);
 
   /** The window's quiet footer: what one pass of this step comes to. */
@@ -304,22 +306,32 @@ export function StepSentence({
             <button
               className={`drill-choice ${step.freeMode ? "active" : ""}`}
               aria-pressed={!!step.freeMode}
-              onClick={() => onChange({ freeMode: true })}
+              onClick={() => onChange({ freeMode: true, compoundMeter: false, customPattern: [] })}
             >
               <span className="drill-choice-label">{t("metronome.free")}</span>
             </button>
-            {METER_PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                className={`drill-choice ${
-                  !step.freeMode && meterLabel(step.beatGroups) === preset.label ? "active" : ""
-                }`}
-                aria-pressed={!step.freeMode && meterLabel(step.beatGroups) === preset.label}
-                onClick={() => onChange({ beatGroups: [...preset.groups], freeMode: false })}
-              >
-                <span className="drill-choice-label">{preset.label}</span>
-              </button>
-            ))}
+            {METER_PRESETS.map((preset) => {
+              const active =
+                !step.freeMode &&
+                meterLabel(step.beatGroups, step.compoundMeter ?? false) === preset.label;
+              return (
+                <button
+                  key={preset.label}
+                  className={`drill-choice ${active ? "active" : ""}`}
+                  aria-pressed={active}
+                  onClick={() =>
+                    onChange({
+                      beatGroups: [...preset.groups],
+                      freeMode: false,
+                      compoundMeter: preset.compound ?? false,
+                      customPattern: [],
+                    })
+                  }
+                >
+                  <span className="drill-choice-label">{preset.label}</span>
+                </button>
+              );
+            })}
           </DrillPopoverChoices>
           {/* Any bar length, for the meters the nine presets do not name. A
               number set here is ONE group, so the accent falls on beat one and

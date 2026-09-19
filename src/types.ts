@@ -149,6 +149,10 @@ export type Preset = {
   timeSignature: number;
   beatGroups?: number[];
   freeMode?: boolean;
+  /** True for a 6/8-style additive meter. See AppState.compoundMeter. */
+  compoundMeter?: boolean;
+  /** Non-empty when a custom per-pulse accent pattern is active. See AppState.customPattern. */
+  customPattern?: number[];
   soundType: string;
   volume: number;
   view: "beat" | "drill";
@@ -190,6 +194,10 @@ export type SetlistStep = {
   subdivision: number;
   beatGroups: number[];
   freeMode?: boolean;
+  /** True for a 6/8-style additive meter. See AppState.compoundMeter. */
+  compoundMeter?: boolean;
+  /** Non-empty when a custom per-pulse accent pattern is active. See AppState.customPattern. */
+  customPattern?: number[];
   soundType: string;
   volume: number;
   /**
