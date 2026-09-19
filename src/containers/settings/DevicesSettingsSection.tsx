@@ -13,7 +13,7 @@ import type { CalibrationCacheEntry } from "../../ipc";
 import { AudioOutputDropdown } from "../../components/AudioOutputDropdown";
 import { AudioInputDropdown } from "../../components/AudioInputDropdown";
 import { MidiDeviceDropdown } from "../../components/MidiDeviceDropdown";
-import { ChannelDropdown, channelLabel } from "../../components/ChannelDropdown";
+import { ChannelDropdown } from "../../components/ChannelDropdown";
 import type { useEvaluation } from "../../hooks/useEvaluation";
 import type { UseMidiReturn } from "../../hooks/useMidi";
 
@@ -175,7 +175,7 @@ export function DevicesSettingsSection({
                   setOutputChannels(next);
                 }}
               >
-                {channelLabel(ch, false)}
+                {`Ch ${ch + 1}`}
               </button>
             ))}
           </div>
