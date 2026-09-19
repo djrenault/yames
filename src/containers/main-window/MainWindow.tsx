@@ -1056,6 +1056,7 @@ export function MainWindow() {
           onNewSetlist={handleNewSetlist}
           onDeleteSetlist={setlistSession.deleteSetlist}
           onRenameSetlist={setlistSession.renameSetlist}
+          onDuplicateSetlist={(id) => void setlistSession.duplicateSetlist(id)}
           coachOpen={session.cardOpen}
           coachActive={session.active}
           coachListening={evaluation.enabled}

@@ -557,6 +557,54 @@
   color: var(--accent);
 }
 
+/* The drag handle sits opposite the tools, at the row's leading edge — the
+   usual place for one, and clear of the per-step buttons on the other end.
+   Same hover/selected/focus-within reveal as the tools, so the row does not
+   grow a second permanently-visible control. */
+.setlist-step-drag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  flex: none;
+  padding-top: 6px;
+  margin-right: -4px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.setlist-step:hover .setlist-step-drag,
+.setlist-step.selected .setlist-step-drag,
+.setlist-step:focus-within .setlist-step-drag {
+  opacity: 1;
+}
+
+.setlist-step-drag:hover {
+  color: var(--text-primary);
+}
+
+.setlist-step-drag:active {
+  cursor: grabbing;
+}
+
+/* The row being picked up. Faded rather than hidden, so the list does not
+   jump while you decide where it goes. */
+.setlist-step.dragging {
+  opacity: 0.45;
+}
+
+/* Where it would land if dropped now. Specificity ties `.selected`/`.running`
+   on the class count, so this rule has to come after them to win when a drag
+   passes over the currently selected or running step. */
+.setlist-step.drag-over {
+  border-top-color: var(--accent);
+  border-top-width: 2px;
+}
+
 .setlist-volume-range {
   width: 150px;
   accent-color: var(--accent);

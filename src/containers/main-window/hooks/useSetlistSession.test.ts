@@ -376,6 +376,40 @@ describe("useSetlistSession", () => {
     });
   });
 
+  describe("duplicateSetlist", () => {
+    it("copies a setlist's steps into a new, distinctly named setlist", async () => {
+      const { result } = mount();
+      await act(async () => {
+        result.current.loadSetlist(CHAIN);
+      });
+      await act(async () => {
+        await result.current.saveActiveSetlist();
+      });
+
+      let copy: Setlist | null = null;
+      await act(async () => {
+        copy = await result.current.duplicateSetlist(CHAIN.id);
+      });
+      expect(copy!.id).not.toBe(CHAIN.id);
+      expect(copy!.name).toBe("Warm-up copy");
+      expect(copy!.steps).toHaveLength(CHAIN.steps.length);
+      // A copy, not an alias — each step gets its own id too.
+      expect(copy!.steps.map((s) => s.id)).not.toEqual(CHAIN.steps.map((s) => s.id));
+      expect(result.current.setlists.map((c) => c.id)).toContain(copy!.id);
+      // The original stays put, in the list and open in the editor.
+      expect(result.current.setlist?.id).toBe(CHAIN.id);
+    });
+
+    it("does nothing for a setlist that isn't in the list", async () => {
+      const { result } = mount();
+      let copy: Setlist | null = null;
+      await act(async () => {
+        copy = await result.current.duplicateSetlist("no-such-id");
+      });
+      expect(copy).toBeNull();
+    });
+  });
+
   it("closing the setlist leaves nothing behind for the preset to fight with", async () => {
     const { result } = mount();
     await act(async () => {

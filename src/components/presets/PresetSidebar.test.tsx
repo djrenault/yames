@@ -242,6 +242,32 @@ describe("PresetSidebar", () => {
     expect(container.querySelector(".preset-sidebar-title")?.textContent).toBe("Setlists");
   });
 
+  it("offers Duplicate on a setlist's right-click menu", async () => {
+    // duplicateSetlist (setlist/setlists.ts) existed with no caller until
+    // this — the pure function was there, nothing in the UI reached it.
+    setInvokeResponse("list_presets", () => []);
+    const onDuplicateSetlist = vi.fn();
+    const { container } = render(
+      <PresetSidebar
+        {...baseProps}
+        view="setlist"
+        setlists={[makeSetlist()]}
+        onDuplicateSetlist={onDuplicateSetlist}
+      />,
+    );
+    const row = await waitFor(() => {
+      const el = container.querySelector(".setlist-item");
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    fireEvent.contextMenu(row);
+    const duplicateBtn = await screen.findByText("Duplicate setlist");
+    fireEvent.click(duplicateBtn);
+    expect(onDuplicateSetlist).toHaveBeenCalledWith("ch1");
+    // The menu closes behind it.
+    expect(screen.queryByText("Duplicate setlist")).toBeNull();
+  });
+
   it("keeps setlists off every other tab's library", async () => {
     setInvokeResponse("list_presets", () => []);
     for (const view of ["beat", "drill"] as const) {

@@ -32,6 +32,7 @@ interface PresetSidebarProps {
   onNewSetlist?: () => void;
   onDeleteSetlist?: (id: string) => void;
   onRenameSetlist?: (id: string, name: string) => void;
+  onDuplicateSetlist?: (id: string) => void;
 }
 
 function generateId(): string {
@@ -138,6 +139,7 @@ export const PresetSidebar = forwardRef<PresetSidebarHandle, PresetSidebarProps>
   onNewSetlist,
   onDeleteSetlist,
   onRenameSetlist,
+  onDuplicateSetlist,
 }, ref) {
   const [allPresets, setAllPresets] = useState<Preset[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -700,6 +702,14 @@ export const PresetSidebar = forwardRef<PresetSidebarHandle, PresetSidebarProps>
             }}
           >
             {t("presets.rename")}
+          </button>
+          <button
+            onClick={() => {
+              onDuplicateSetlist?.(setlistMenu.id);
+              setSetlistMenu(null);
+            }}
+          >
+            {t("setlist.duplicateSetlist")}
           </button>
           <button
             className="preset-context-delete"

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SetlistParagraph } from "./SetlistParagraph";
 import type { Setlist, SetlistStep } from "../../types";
@@ -75,6 +75,19 @@ function draw(over: Partial<Parameters<typeof SetlistParagraph>[0]> = {}) {
 }
 
 const blocks = (c: HTMLElement) => [...c.querySelectorAll<HTMLElement>(".setlist-step")];
+const dragHandles = (c: HTMLElement) => [...c.querySelectorAll<HTMLElement>(".setlist-step-drag")];
+
+/** jsdom/happy-dom's DataTransfer is bare-bones; a plain stand-in is enough
+ *  for the three calls the handlers actually make. */
+function fakeDataTransfer() {
+  const store = new Map<string, string>();
+  return {
+    setData: (k: string, v: string) => store.set(k, v),
+    getData: (k: string) => store.get(k) ?? "",
+    dropEffect: "",
+    effectAllowed: "",
+  };
+}
 
 describe("every step is open", () => {
   it("draws all of them, not one", () => {
@@ -195,6 +208,72 @@ describe("the rest of the paragraph", () => {
     draw({ setlist: { ...SETLIST, steps: [] }, selectedStepId: null });
     expect(screen.getByText(/plays your steps in order/i)).toBeTruthy();
     expect(screen.getByText("+ Add a step")).toBeTruthy();
+  });
+});
+
+describe("drag to reorder", () => {
+  it("has a handle on every step, on top of the up/down buttons", () => {
+    // Pointer-only: the buttons stay as the keyboard/assistive-tech path.
+    const { container } = draw();
+    expect(dragHandles(container)).toHaveLength(3);
+    for (const tools of container.querySelectorAll(".setlist-step-tools")) {
+      expect(within(tools as HTMLElement).getAllByRole("button")).toHaveLength(4);
+    }
+  });
+
+  it("reorders through the same reorderSteps the up/down buttons use", () => {
+    const onChange = vi.fn();
+    const { container } = draw({ onChange });
+    const dt = fakeDataTransfer();
+    fireEvent.dragStart(dragHandles(container)[0], { dataTransfer: dt });
+    fireEvent.dragOver(blocks(container)[2], { dataTransfer: dt });
+    fireEvent.drop(blocks(container)[2], { dataTransfer: dt });
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const next = onChange.mock.calls[0][0] as Setlist;
+    expect(next.steps.map((s) => s.id)).toEqual(["s2", "s3", "s1"]);
+  });
+
+  it("marks the picked-up row and the row it would land on", () => {
+    const { container } = draw();
+    const dt = fakeDataTransfer();
+    fireEvent.dragStart(dragHandles(container)[0], { dataTransfer: dt });
+    expect(blocks(container)[0].className).toContain("dragging");
+
+    fireEvent.dragOver(blocks(container)[2], { dataTransfer: dt });
+    expect(blocks(container)[2].className).toContain("drag-over");
+    // Never its own row.
+    expect(blocks(container)[0].className).not.toContain("drag-over");
+  });
+
+  it("clears the drag markers once it lands", () => {
+    const { container } = draw();
+    const dt = fakeDataTransfer();
+    fireEvent.dragStart(dragHandles(container)[0], { dataTransfer: dt });
+    fireEvent.dragOver(blocks(container)[2], { dataTransfer: dt });
+    fireEvent.drop(blocks(container)[2], { dataTransfer: dt });
+
+    for (const block of blocks(container)) {
+      expect(block.className).not.toContain("dragging");
+      expect(block.className).not.toContain("drag-over");
+    }
+  });
+
+  it("does nothing when a step is dropped back on itself", () => {
+    const onChange = vi.fn();
+    const { container } = draw({ onChange });
+    const dt = fakeDataTransfer();
+    fireEvent.dragStart(dragHandles(container)[1], { dataTransfer: dt });
+    fireEvent.dragOver(blocks(container)[1], { dataTransfer: dt });
+    fireEvent.drop(blocks(container)[1], { dataTransfer: dt });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("does not select the step just from grabbing its handle", () => {
+    const onSelectStep = vi.fn();
+    const { container } = draw({ selectedStepId: "s1", onSelectStep });
+    fireEvent.click(dragHandles(container)[2]);
+    expect(onSelectStep).not.toHaveBeenCalled();
   });
 });
 

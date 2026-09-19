@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   duplicateStep,
@@ -79,6 +79,20 @@ function ToolIcon({ kind }: { kind: "up" | "down" | "copy" | "remove" }) {
   return <svg {...common}><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>;
 }
 
+/** Six dots — the drag-handle glyph every list-reorder UI already teaches. */
+function GripIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="9" cy="6" r="1.6" />
+      <circle cx="9" cy="12" r="1.6" />
+      <circle cx="9" cy="18" r="1.6" />
+      <circle cx="15" cy="6" r="1.6" />
+      <circle cx="15" cy="12" r="1.6" />
+      <circle cx="15" cy="18" r="1.6" />
+    </svg>
+  );
+}
+
 export function SetlistParagraph({
   setlist,
   selectedStepId,
@@ -92,6 +106,17 @@ export function SetlistParagraph({
   const { t } = useTranslation();
   const listRef = useRef<HTMLDivElement>(null);
   const openRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Drag-to-reorder, on top of the up/down buttons rather than instead of
+   * them: dragging is pointer-only, so the buttons stay as the keyboard and
+   * assistive-tech path. `dragIndex` is the step being picked up;
+   * `dragOverIndex` is the row it would land on if dropped now, purely for
+   * the insertion-line indicator — the actual move happens once, on drop,
+   * through the same `reorderSteps` the buttons already call.
+   */
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const total = setlistSeconds(setlist);
 
@@ -183,9 +208,28 @@ export function SetlistParagraph({
 
           return (
             <div
-              className={`setlist-step${selected ? " selected" : ""}${running ? " running" : ""}`}
+              className={`setlist-step${selected ? " selected" : ""}${running ? " running" : ""}${
+                dragIndex === index ? " dragging" : ""
+              }${dragOverIndex === index && dragIndex !== null && dragIndex !== index ? " drag-over" : ""}`}
               key={step.id}
               ref={selected ? openRef : undefined}
+              onDragOver={(e) => {
+                if (dragIndex === null) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (dragOverIndex !== index) setDragOverIndex(index);
+              }}
+              onDragLeave={() => {
+                if (dragOverIndex === index) setDragOverIndex(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (dragIndex !== null && dragIndex !== index) {
+                  onChange(reorderSteps(setlist, dragIndex, index));
+                }
+                setDragIndex(null);
+                setDragOverIndex(null);
+              }}
               /*
                * `role` and `tabIndex` are load-bearing, not decoration.
                *
@@ -218,6 +262,39 @@ export function SetlistParagraph({
                 if (!selected) onSelectStep(step.id);
               }}
             >
+              {/*
+               * A real `<button>`, not a plain `draggable` div — `useDrag`
+               * (the Tauri window-drag hook) calls `startDragging()` on any
+               * mousedown that doesn't land on something `isInteractive`
+               * considers a control, and this project has already paid for
+               * that mistake twice (see the note on the row's own
+               * role/tabIndex above). A `<button>` is in its interactive-tags
+               * list, so a mousedown here starts the HTML5 drag instead of
+               * carrying the window off with it.
+               *
+               * Pointer-only on purpose: the up/down buttons beside it are
+               * the keyboard and assistive-tech path for the same move.
+               */}
+              <button
+                type="button"
+                className="setlist-step-drag"
+                aria-hidden="true"
+                tabIndex={-1}
+                title={t("setlist.dragToReorder")}
+                draggable
+                onClick={(e) => e.stopPropagation()}
+                onDragStart={(e) => {
+                  setDragIndex(index);
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", String(index));
+                }}
+                onDragEnd={() => {
+                  setDragIndex(null);
+                  setDragOverIndex(null);
+                }}
+              >
+                <GripIcon />
+              </button>
               <span className="setlist-step-no">
                 {running ? t("setlist.nowShort") : index + 1}
               </span>

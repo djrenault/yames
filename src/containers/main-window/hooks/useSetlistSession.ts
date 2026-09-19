@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   addStep,
   createSetlist,
+  duplicateSetlist as duplicateSetlistData,
   renameSetlist as renameSetlistData,
   stateToSetlistStep,
   updateStep,
@@ -323,6 +324,25 @@ export function useSetlistSession({
   );
 
   /**
+   * A whole new setlist, with its own copy of every step (U9's `duplicateSetlist`
+   * had no caller until now). Persisted immediately, like `newSetlist` — there
+   * is no working copy to save later, since this isn't the one you have open.
+   * Named distinctly so two rows with the same name don't sit in the library
+   * looking identical.
+   */
+  const duplicateSetlist = useCallback(
+    async (id: string) => {
+      const target = setlists.find((c) => c.id === id);
+      if (!target) return null;
+      const copy = duplicateSetlistData(target, t("setlist.copyName", { name: target.name }));
+      const stamped = await saveSetlistIpc(copy).catch(() => copy);
+      setSetlists((prev) => upsertSetlist(prev, stamped));
+      return stamped;
+    },
+    [setlists, t],
+  );
+
+  /**
    * "Add to setlist" (U9.8) — from the metronome page, not the paragraph.
    *
    * Reaching this button means the setlist you are adding to is usually not
@@ -427,6 +447,7 @@ export function useSetlistSession({
     revertSetlist,
     deleteSetlist,
     renameSetlist,
+    duplicateSetlist,
     addStepFromNow,
     addToSetlist,
     addToNewSetlist,
