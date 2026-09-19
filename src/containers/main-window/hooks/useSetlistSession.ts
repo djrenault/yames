@@ -34,12 +34,14 @@ import { useSetlistRunner } from "./useSetlistRunner";
  * the user editing the step they are listening to.
  */
 
-/** The six fields a step copies from the engine, as one comparable string. */
+/** The fields a step copies from the engine, as one comparable string. */
 function signature(
   bpm: number,
   subdivision: number,
   beatGroups: number[] | undefined,
   freeMode: boolean | undefined,
+  compoundMeter: boolean | undefined,
+  customPattern: number[] | undefined,
   soundType: string,
   volume: number,
 ): string {
@@ -50,13 +52,24 @@ function signature(
     subdivision,
     meterKey(beatGroups),
     freeMode ? "free" : "-",
+    compoundMeter ? "compound" : "-",
+    (customPattern ?? []).join(","),
     soundType,
     Math.round(volume * 100),
   ].join("|");
 }
 
 function stepSignature(step: SetlistStep): string {
-  return signature(step.bpm, step.subdivision, step.beatGroups, step.freeMode, step.soundType, step.volume);
+  return signature(
+    step.bpm,
+    step.subdivision,
+    step.beatGroups,
+    step.freeMode,
+    step.compoundMeter,
+    step.customPattern,
+    step.soundType,
+    step.volume,
+  );
 }
 
 function stateSignature(state: AppState): string {
@@ -65,6 +78,8 @@ function stateSignature(state: AppState): string {
     state.subdivision,
     state.beatGroups,
     state.freeMode,
+    state.compoundMeter,
+    state.customPattern,
     state.soundType,
     state.volume,
   );
@@ -77,6 +92,8 @@ function stateAsStepPatch(state: AppState): Partial<Omit<SetlistStep, "id">> {
     subdivision: state.subdivision,
     beatGroups: [...(state.beatGroups ?? [])],
     freeMode: state.freeMode ?? false,
+    compoundMeter: state.compoundMeter,
+    customPattern: state.customPattern.length > 0 ? [...state.customPattern] : undefined,
     soundType: state.soundType,
     volume: state.volume,
   };
@@ -93,6 +110,8 @@ function stateAsPreset(state: AppState, name: string): Preset {
     timeSignature: state.timeSignature,
     beatGroups: state.beatGroups,
     freeMode: state.freeMode,
+    compoundMeter: state.compoundMeter,
+    customPattern: state.customPattern.length > 0 ? [...state.customPattern] : undefined,
     soundType: state.soundType,
     volume: state.volume,
     view: "beat",
