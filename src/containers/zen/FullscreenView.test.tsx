@@ -65,6 +65,63 @@ describe("FullscreenView", () => {
    * stopped in a meter longer than beatsPerBar, `measureBeat` ran past
    * the last rendered dot and nothing ever lit.
    */
+  /**
+   * The Zen view had its own copy of the beat-grouping logic, unaware of
+   * `compoundMeter` — a real 6/8 (`beatGroups: [3, 3]`, compound) drew six
+   * flat "group" dots and only ever lit the first two, since the engine's
+   * `measureBeat` in compound mode counts the 2 real beats, not the 6
+   * eighth notes. `GroupEditor` (the metronome screen) already drew this
+   * correctly; this locks Zen's copy of it in too.
+   */
+  describe("compound meter dots", () => {
+    const sixEight = {
+      ...DEFAULT_TEST_STATE,
+      timeSignature: 6,
+      beatGroups: [3, 3],
+      compoundMeter: true,
+    };
+    const beat = (measureBeat: number, subdivision = 0, isDownbeat = subdivision === 0) => ({
+      beat: measureBeat,
+      measureBeat,
+      subdivision,
+      isDownbeat,
+      isAccent: measureBeat === 0 && isDownbeat,
+    });
+
+    it("draws one big dot per real beat, not one per eighth note", () => {
+      const { container } = render(
+        <FullscreenView state={sixEight} currentBeat={beat(0)} activeTab="beat" onExit={vi.fn()} />,
+      );
+      expect(container.querySelectorAll(".fs-group-cluster").length).toBe(2);
+      expect(container.querySelectorAll(".fs-beat").length).toBe(2);
+    });
+
+    it("draws the eighth-note sub-dots under each real beat", () => {
+      const { container } = render(
+        <FullscreenView state={sixEight} currentBeat={beat(0)} activeTab="beat" onExit={vi.fn()} />,
+      );
+      // 3 eighth notes per beat = 2 sub-dots left over after the big one.
+      expect(container.querySelectorAll(".fs-sub-dot").length).toBe(4);
+    });
+
+    it("lights the second real beat's dot, not a sixth flat one", () => {
+      const { container } = render(
+        <FullscreenView state={sixEight} currentBeat={beat(1)} activeTab="beat" onExit={vi.fn()} />,
+      );
+      expect(container.querySelectorAll(".fs-beat.active").length).toBe(1);
+      const clusters = container.querySelectorAll(".fs-group-cluster");
+      expect(clusters[1].querySelector(".fs-beat.active")).not.toBeNull();
+    });
+
+    it("lights the sub-dot for the eighth note within the real beat", () => {
+      const { container } = render(
+        <FullscreenView state={sixEight} currentBeat={beat(0, 1, false)} activeTab="beat" onExit={vi.fn()} />,
+      );
+      const subDots = container.querySelectorAll(".fs-sub-dot");
+      expect(subDots[0].className).toContain("active");
+    });
+  });
+
   describe("drill tab dot count", () => {
     const sevenEight = {
       ...DEFAULT_TEST_STATE,
