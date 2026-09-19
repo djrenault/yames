@@ -50,7 +50,7 @@ export function MeterPresets({
   const isCustom = customPattern.length > 0;
   const activeKey = meterKey(beatGroups);
   // Variant-aware, so [2, 3] highlights 5/4 rather than nothing.
-  const activePreset = freeMode || isCustom ? undefined : findMeterPreset(beatGroups);
+  const activePreset = freeMode || isCustom ? undefined : findMeterPreset(beatGroups, compoundMeter);
   const variants = activePreset ? METER_VARIANTS[activePreset.label] : null;
 
   const totalBeats = beatGroups.reduce((sum, n) => sum + n, 0);

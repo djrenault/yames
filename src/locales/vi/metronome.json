@@ -34,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} phút",
     "lastSessionScore": "điểm {{score}}",
     "accent": {
-      "label": "Nhấn",
+      "label": "Nhấn mạnh",
       "groups": "Đầu nhóm",
       "all": "Mọi phách",
       "none": "Không"

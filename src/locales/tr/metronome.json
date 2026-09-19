@@ -34,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} dk",
     "lastSessionScore": "puan {{score}}",
     "accent": {
-      "label": "Vurgu",
+      "label": "Güçlü vurgu",
       "groups": "Grup başları",
       "all": "Her vuruş",
       "none": "Yok"

@@ -34,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} мин",
     "lastSessionScore": "оценка {{score}}",
     "accent": {
-      "label": "Акцент",
+      "label": "Сильный акцент",
       "groups": "Начало групп",
       "all": "Каждая доля",
       "none": "Нет"

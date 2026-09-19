@@ -163,6 +163,12 @@ describe("findMeterPresetIndex", () => {
     expect(findMeterPresetIndex([])).toBe(-1);
     expect(findMeterPresetIndex(undefined)).toBe(-1);
   });
+
+  it("disambiguates 3/8 from 3/4 — same [3] groups, different compound flag", () => {
+    expect(findMeterPreset([3])?.label).toBe("3/4");
+    expect(findMeterPreset([3], false)?.label).toBe("3/4");
+    expect(findMeterPreset([3], true)?.label).toBe("3/8");
+  });
 });
 
 describe("meterLabel", () => {
@@ -174,6 +180,16 @@ describe("meterLabel", () => {
 
   it("falls back to n/4 for a hand-built grouping", () => {
     expect(meterLabel([5, 5])).toBe("10/4");
+  });
+
+  it("reads the undivided [5] as the 5/4 variant, not a 5-quarter-note bar of its own", () => {
+    expect(findMeterPreset([5])?.label).toBe("5/4");
+    expect(meterLabel([5])).toBe("5/4");
+  });
+
+  it("takes the compound flag when given, disambiguating 3/8 from 3/4", () => {
+    expect(meterLabel([3])).toBe("3/4");
+    expect(meterLabel([3], true)).toBe("3/8");
   });
 });
 

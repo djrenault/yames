@@ -34,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} min",
     "lastSessionScore": "ocena {{score}}",
     "accent": {
-      "label": "Akcent",
+      "label": "Mocny akcent",
       "groups": "Początki grup",
       "all": "Każda miara",
       "none": "Brak"

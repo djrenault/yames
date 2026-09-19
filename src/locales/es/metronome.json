@@ -34,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} min",
     "lastSessionScore": "puntuación {{score}}",
     "accent": {
-      "label": "Acento",
+      "label": "Acento fuerte",
       "groups": "Inicio de grupo",
       "all": "Cada pulso",
       "none": "Ninguno"

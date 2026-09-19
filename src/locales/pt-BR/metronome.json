@@ -34,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} min",
     "lastSessionScore": "nota {{score}}",
     "accent": {
-      "label": "Acento",
+      "label": "Acento forte",
       "groups": "Início de grupo",
       "all": "Cada tempo",
       "none": "Nenhum"

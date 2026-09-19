@@ -34,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} 分",
     "lastSessionScore": "スコア {{score}}",
     "accent": {
-      "label": "アクセント",
+      "label": "強いアクセント",
       "groups": "グループの頭",
       "all": "すべての拍",
       "none": "なし"

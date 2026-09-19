@@ -34,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} Min.",
     "lastSessionScore": "Score {{score}}",
     "accent": {
-      "label": "Betonung",
+      "label": "Starke Betonung",
       "groups": "Gruppenanfänge",
       "all": "Jeder Schlag",
       "none": "Keine"

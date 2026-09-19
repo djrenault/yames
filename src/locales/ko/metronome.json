@@ -34,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}}분",
     "lastSessionScore": "점수 {{score}}",
     "accent": {
-      "label": "악센트",
+      "label": "강한 악센트",
       "groups": "그룹 시작",
       "all": "모든 박",
       "none": "없음"
