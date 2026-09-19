@@ -141,6 +141,7 @@ export function SetlistPlayer({
   const span = widths.reduce((a, b) => a + b, 0) || 1;
 
   const groups = step.beatGroups.length ? step.beatGroups : [4];
+  const isCompound = step.compoundMeter ?? false;
   let beatOffset = 0;
 
   return (
@@ -168,27 +169,61 @@ export function SetlistPlayer({
       </div>
 
       <div className="setlist-player-beats" aria-hidden="true">
-        {groups.map((size, groupIndex) => {
-          const start = beatOffset;
-          beatOffset += size;
-          return (
-            <div className="setlist-player-group" key={groupIndex}>
-              {Array.from({ length: size }, (_, i) => {
-                const beat = start + i;
-                const live = isPlaying && beat === activeBeat;
-                return (
+        {/* Compound meter (6/8-style): `groups` holds one entry per REAL
+            beat (its own eighth-note count), so one big dot per entry —
+            never one per eighth note — with that beat's remaining eighth
+            notes as small dots underneath. Mirrors `GroupEditor`'s and
+            `FullscreenView`'s compound branch; this screen used to draw the
+            ordinary reading regardless, which is why a 6/8 step here showed
+            six flat dots and only ever lit the first two — the engine's
+            live beat position in compound mode counts the 2 real beats,
+            not the 6 eighth notes. */}
+        {isCompound
+          ? groups.map((pulses, beatIdx) => {
+              const isBeatLive = isPlaying && activeBeat === beatIdx && isDownbeat;
+              const isSubBeatLive = isPlaying && activeBeat === beatIdx && !isDownbeat;
+              return (
+                <div className="setlist-player-group setlist-player-group--compound" key={beatIdx}>
                   <span
-                    key={beat}
                     className="setlist-player-dot"
-                    data-live={live ? "" : undefined}
-                    data-accent={live && (isDownbeat || i === 0) ? "" : undefined}
-                    data-sub={live && activeSub > 0 ? activeSub : undefined}
+                    data-live={isBeatLive ? "" : undefined}
+                    data-accent={isBeatLive && beatIdx === 0 ? "" : undefined}
                   />
-                );
-              })}
-            </div>
-          );
-        })}
+                  {pulses > 1 && (
+                    <span className="setlist-player-subdots">
+                      {Array.from({ length: pulses - 1 }, (_, s) => (
+                        <span
+                          key={s}
+                          className="setlist-player-subdot"
+                          data-live={isSubBeatLive && activeSub === s + 1 ? "" : undefined}
+                        />
+                      ))}
+                    </span>
+                  )}
+                </div>
+              );
+            })
+          : groups.map((size, groupIndex) => {
+              const start = beatOffset;
+              beatOffset += size;
+              return (
+                <div className="setlist-player-group" key={groupIndex}>
+                  {Array.from({ length: size }, (_, i) => {
+                    const beat = start + i;
+                    const live = isPlaying && beat === activeBeat;
+                    return (
+                      <span
+                        key={beat}
+                        className="setlist-player-dot"
+                        data-live={live ? "" : undefined}
+                        data-accent={live && (isDownbeat || i === 0) ? "" : undefined}
+                        data-sub={live && activeSub > 0 ? activeSub : undefined}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            })}
       </div>
 
       <div className="setlist-player-left">{leftLabel(t, step, remaining)}</div>
