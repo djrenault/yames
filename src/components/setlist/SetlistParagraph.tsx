@@ -274,6 +274,15 @@ export function SetlistParagraph({
                *
                * Pointer-only on purpose: the up/down buttons beside it are
                * the keyboard and assistive-tech path for the same move.
+               *
+               * The other half of making this fire at all lives outside this
+               * file: Tauri's main window sets `dragDropEnabled: false`
+               * (tauri.conf.json). Left at its default of `true`, the
+               * webview intercepts drag events at the OS level for native
+               * file-drop support, and `dragover`/`drop` never reach the
+               * DOM at all — `dragstart` still fires (it never leaves the
+               * page), so the handle drags and the row dims, and dropping
+               * it anywhere does nothing. That was exactly the bug report.
                */}
               <button
                 type="button"
