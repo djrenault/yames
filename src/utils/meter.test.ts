@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { METER_PRESETS, METER_VARIANTS } from "../constants/metronome";
 import {
   accentPositions,
+  compoundAccentPositions,
   cycleMeterPreset,
   findMeterPreset,
   findMeterPresetIndex,
@@ -86,6 +87,34 @@ describe("accentPositions", () => {
     }
   });
 });
+describe("compoundAccentPositions", () => {
+  // Bar-local BEAT indices, not eighth-note positions — the whole point
+  // of the compound reading. 7/8 as "2+2+3" has 3 real beats.
+  it("marks only the bar's own downbeat under the default (groups)", () => {
+    expect([...compoundAccentPositions(3)]).toEqual([0]);
+    expect([...compoundAccentPositions(2)]).toEqual([0]);
+    expect([...compoundAccentPositions(4)]).toEqual([0]);
+  });
+
+  it("marks every beat under `all`", () => {
+    expect([...compoundAccentPositions(3, "all")].sort((a, b) => a - b)).toEqual([0, 1, 2]);
+  });
+
+  it("marks nothing under `none`", () => {
+    expect([...compoundAccentPositions(3, "none")]).toEqual([]);
+  });
+
+  it("never marks a position at or past beatCount", () => {
+    for (const beatCount of [1, 2, 3, 4]) {
+      for (const mode of ["groups", "all", "none"] as const) {
+        for (const p of compoundAccentPositions(beatCount, mode)) {
+          expect(p).toBeLessThan(beatCount);
+        }
+      }
+    }
+  });
+});
+
 describe("accentPositions and the accent mode", () => {
   // This mirrors `accent_for` in engine.rs. They must agree: this is what the
   // dots draw at rest, and the engine is what you hear. For as long as the

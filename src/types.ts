@@ -58,6 +58,14 @@ export type AppState = {
   beatGroups: number[];
   freeMode: boolean;
   /**
+   * True for an additive, eighth-note-based meter (6/8, 7/8, 8/8, 9/8,
+   * 12/8): `beatGroups` then holds one entry per real beat, each the
+   * beat's own eighth-note count (2 or 3) — 7/8 as "2+2+3" is 3 beats,
+   * not seven. False (the default) is the ordinary reading: one entry
+   * per group of equal-length beats. See `compound_active` in engine.rs.
+   */
+  compoundMeter: boolean;
+  /**
    * Which beats the click accents: where each group opens (the default), every
    * beat, or none. "none" is what FREE mode does to accents, without giving up
    * the grouping the dots draw.

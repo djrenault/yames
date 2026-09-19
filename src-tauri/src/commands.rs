@@ -90,6 +90,7 @@ fn persist_state(state: &SharedState, app_handle: &AppHandle) {
         store.set("timeSignature", serde_json::json!(s.time_signature));
         store.set("beatGroups", serde_json::json!(s.beat_groups));
         store.set("freeMode", serde_json::json!(s.free_mode));
+        store.set("compoundMeter", serde_json::json!(s.compound_meter));
         store.set("customPattern", serde_json::json!(s.custom_pattern));
         store.set(
             "speedRamp",
@@ -485,6 +486,25 @@ pub fn set_beat_groups(
     emit_state_changed(&state, &app_handle);
     persist_state(&state, &app_handle);
     Ok(())
+}
+
+/// Flip between the "N equal beats in a group" reading of `beat_groups`
+/// (the default) and the additive, eighth-note-based reading a 6/8-style
+/// meter needs, where each entry is one real beat's own eighth-note
+/// count. Separate from `set_beat_groups` because the two rarely change
+/// together outside of picking a meter preset: the beat-count stepper
+/// (`addBeatToLastGroup` / `removeBeatFromLastGroup`) only ever calls
+/// `set_beat_groups`, so resizing a compound meter's last beat leaves it
+/// compound, exactly as resizing a simple meter's last group leaves it
+/// simple.
+#[tauri::command]
+pub fn set_compound_meter(enabled: bool, state: State<SharedState>, app_handle: AppHandle) {
+    {
+        let mut s = state.lock().unwrap();
+        s.compound_meter = enabled;
+    }
+    emit_state_changed(&state, &app_handle);
+    persist_state(&state, &app_handle);
 }
 
 /// FREE mode means "N equal beats, no grouping", so it implies exactly one

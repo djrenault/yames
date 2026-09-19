@@ -22,6 +22,8 @@ interface BeatStepperProps {
   subdivision: number;
   freeMode: boolean;
   onBeatGroupsChange?: (groups: number[]) => void;
+  /** True for a 6/8-style additive meter — see AppState.compoundMeter. */
+  compoundMeter?: boolean;
   /** Non-empty when a custom accent pattern is active — see GroupEditor. */
   customPattern?: number[];
   onCustomPatternChange?: (next: number[]) => void;
@@ -49,13 +51,18 @@ export function BeatStepper({
   subdivision,
   freeMode,
   onBeatGroupsChange,
+  compoundMeter = false,
   customPattern = [],
   onCustomPatternChange,
 }: BeatStepperProps) {
   const { t } = useTranslation();
   const isCustom = customPattern.length > 0;
   const total = isCustom ? customPattern.length : beatGroups.reduce((sum, n) => sum + n, 0);
-  const clicksPerBar = isCustom ? total : total * (SUBDIVISION_MULTIPLIER[subdivision] ?? 1);
+  // A compound meter's `total` already counts eighth notes (7/8's
+  // "3+2+2" sums to 7) — there is no separate Subdivision multiplier to
+  // apply on top, unlike a simple meter's beat count.
+  const clicksPerBar =
+    isCustom || compoundMeter ? total : total * (SUBDIVISION_MULTIPLIER[subdivision] ?? 1);
 
   return (
     <div className="beat-stepper-row">

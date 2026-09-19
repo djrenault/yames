@@ -77,6 +77,29 @@ export function accentPositions(
 }
 
 /**
+ * Bar-local BEAT positions (not eighth-note positions) that accent in a
+ * compound meter, i.e. `beatGroups`'s own indices — `[3, 2, 2]` (7/8 as
+ * "3+2+2") has 3 real beats, so positions live in `{0, 1, 2}`, never `{0,
+ * 3, 5}`. `accentPositions` answers the same question for the ordinary
+ * "N equal beats in a group" meaning; this is its compound sibling, and
+ * must keep mirroring the engine's `compound_active` branch the way
+ * `accentPositions` mirrors the ordinary one.
+ */
+export function compoundAccentPositions(
+  beatCount: number,
+  mode: "groups" | "all" | "none" = "groups",
+): Set<number> {
+  const positions = new Set<number>();
+  if (mode === "none") return positions;
+  if (mode === "all") {
+    for (let i = 0; i < beatCount; i++) positions.add(i);
+    return positions;
+  }
+  positions.add(0); // only the bar's own downbeat — no group starts to mark
+  return positions;
+}
+
+/**
  * Index into `METER_PRESETS` of the preset `groups` belongs to, or -1.
  *
  * Variant-aware: `[2, 3]` is a grouping of the 5/4 preset, so it reports

@@ -84,6 +84,16 @@ export async function setBeatGroups(groups: number[]): Promise<void> {
 }
 
 /**
+ * Switch between the ordinary reading of `beatGroups` (one entry per
+ * group of equal-length beats) and the additive, eighth-note-based
+ * reading a 6/8-style meter needs (one entry per real beat, each that
+ * beat's own eighth-note count). See `AppState.compoundMeter`.
+ */
+export async function setCompoundMeter(enabled: boolean): Promise<void> {
+  return invoke("set_compound_meter", { enabled });
+}
+
+/**
  * Per-pulse accent levels (0=Off, 1=Weak, 2=Medium, 3=Strong), replacing
  * beatGroups + subdivision + accentMode entirely for this bar. Pass `[]`
  * to clear back to the ordinary meter.

@@ -18,6 +18,7 @@ const DEFAULT_STATE: AppState = {
   timeSignature: 4,
   beatGroups: [4],
   freeMode: false,
+  compoundMeter: false,
   accentMode: "groups" as const,
   customPattern: [],
   countIn: { beats: 0, done: 0 },

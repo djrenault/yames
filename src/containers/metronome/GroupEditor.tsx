@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { BeatFeedback } from "../../types";
-import { accentPositions, meterTotal } from "../../utils/meter";
+import { accentPositions, compoundAccentPositions, meterTotal } from "../../utils/meter";
 import { withPulseCycled } from "../../constants/metronome";
 
 /** Accent-level index (0-3) → the CSS class rendering that tier. */
@@ -15,6 +15,12 @@ interface GroupEditorProps {
   activeSub?: number;
   isDownbeat?: boolean;
   freeMode?: boolean;
+  /**
+   * True for a 6/8-style additive meter: `beatGroups` then holds one
+   * entry per real beat (its own eighth-note count), not one entry per
+   * group of equal-length beats — see AppState.compoundMeter.
+   */
+  compoundMeter?: boolean;
   /** Which beats carry the accent — mirrors the engine (U2.3). */
   accentMode?: "groups" | "all" | "none";
   /** `BeatEvent.isAccent` for the beat currently lit. */
@@ -54,6 +60,7 @@ export function GroupEditor({
   activeSub = -1,
   isDownbeat = false,
   freeMode = false,
+  compoundMeter = false,
   accentMode = "groups",
   isAccentBeat = false,
   customPattern = [],
@@ -85,6 +92,42 @@ export function GroupEditor({
                   level: t(`metronome.accentLevels.${LEVEL_NAME_KEYS[level] ?? "weak"}`),
                 })}
               />
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (compoundMeter && beatGroups.length > 0) {
+    // One big dot per REAL beat (not per eighth note) — 7/8's "3+2+2" is
+    // 3 dots, never 7 — each with its own (beatGroups[i] - 1) small dots
+    // underneath for that beat's remaining eighth notes. No group boxes:
+    // a compound meter's beats aren't grouped into anything further.
+    const compoundAccents = compoundAccentPositions(beatGroups.length, accentMode);
+    return (
+      <div className="group-editor">
+        <div className="free-dots">
+          {beatGroups.map((pulses, i) => {
+            const isActive = isPlaying && isDownbeat && activeBeat === i;
+            const isSubBeat = isPlaying && !isDownbeat && activeBeat === i;
+            const isAccent = isActive ? isAccentBeat : compoundAccents.has(i);
+            const fb = feedback?.get(i);
+            const feedbackClass = fb && isActive ? `feedback-${fb.classification}` : "";
+            return (
+              <div key={i} className="group-dot-wrap">
+                <div
+                  className={`group-dot ${isAccent ? "accent" : ""} ${isActive ? "playing" : ""} ${feedbackClass}`}
+                  title={t("metronome.beatCount", { count: pulses })}
+                />
+                {pulses > 1 && (
+                  <div className="group-sub-dots">
+                    {Array.from({ length: pulses - 1 }, (_, s) => (
+                      <div key={s} className={`group-sub-dot ${isSubBeat && activeSub === s + 1 ? "active" : ""}`} />
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>

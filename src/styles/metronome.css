@@ -1147,6 +1147,17 @@
   display: flex;
   align-items: center;
   width: 100%;
+  /* A meter with several grouping variants (7/8's "2+2+3" chips, 8/8's
+     three-way set) can outgrow the row at any width, not just the narrow
+     one the old max-width: 899px rule assumed — wrapping is now the
+     default everywhere, with the accent control pushed to the right on
+     its own line below via `margin-left: auto`. */
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+.meter-row > .accent-control {
+  margin-left: auto;
 }
 
 /* Between the meter chip and the grouping badges — all three are the same
@@ -1233,11 +1244,6 @@ span.meter-grouping-chip {
    beneath the meter rather than squeezing it — and the fixed left column
    would be a lie there. */
 @media (max-width: 899px) {
-  .meter-row {
-    flex-wrap: wrap;
-    row-gap: 12px;
-  }
-
   .beat-clicks {
     min-width: 0;
   }

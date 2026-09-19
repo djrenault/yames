@@ -129,6 +129,12 @@ pub struct AppState {
     pub beat_groups: Vec<u8>,
     #[serde(rename = "freeMode", default)]
     pub free_mode: bool,
+    /// True for an additive, eighth-note-based meter (6/8, 7/8, 8/8, 9/8,
+    /// 12/8): `beat_groups` then holds one entry per real beat, each the
+    /// beat's own eighth-note count (2 or 3), rather than one entry per
+    /// group of equal-length beats. See `compound_active` in engine.rs.
+    #[serde(rename = "compoundMeter", default)]
+    pub compound_meter: bool,
     #[serde(rename = "speedRamp")]
     pub speed_ramp: SpeedRamp,
     /// Which beats the click accents: "groups" (where each beat group opens,
@@ -183,6 +189,7 @@ impl Default for AppState {
             time_signature: 4,
             beat_groups: vec![4],
             free_mode: false,
+            compound_meter: false,
             speed_ramp: SpeedRamp::default(),
             accent_mode: default_accent_mode(),
             custom_pattern: Vec::new(),

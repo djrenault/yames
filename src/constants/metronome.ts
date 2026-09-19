@@ -91,16 +91,25 @@ export const METER_VARIANTS: Record<string, number[][]> = {
  * Nothing may depend on the index of an entry: `cycleMeterPreset` looks
  * 4/4 up by label precisely so this list can be reordered again.
  */
-export const METER_PRESETS: Array<{ label: string; groups: number[] }> = [
+/**
+ * `compound` marks the five "/8" meters: additive groupings of eighth
+ * notes where each `groups` entry is one real beat's own eighth-note
+ * count (2 or 3), not one of several equal-length beats sharing a group
+ * — 6/8's "3+3" is 2 beats, 7/8's "3+2+2" is 3, never 6 or 7. The "/4"
+ * meters keep the ordinary reading: each entry IS a count of separate,
+ * equal-length beats. See `AppState.compoundMeter` / `compound_active`
+ * in engine.rs.
+ */
+export const METER_PRESETS: Array<{ label: string; groups: number[]; compound?: boolean }> = [
   { label: "2/4",  groups: [2] },
   { label: "3/4",  groups: [3] },
   { label: "4/4",  groups: [4] },
   { label: "5/4",  groups: [3, 2] },
-  { label: "6/8",  groups: [3, 3] },
-  { label: "7/8",  groups: [3, 2, 2] },
-  { label: "8/8",  groups: [3, 2, 3] },
-  { label: "9/8",  groups: [3, 3, 3] },
-  { label: "12/8", groups: [3, 3, 3, 3] },
+  { label: "6/8",  groups: [3, 3], compound: true },
+  { label: "7/8",  groups: [3, 2, 2], compound: true },
+  { label: "8/8",  groups: [3, 2, 3], compound: true },
+  { label: "9/8",  groups: [3, 3, 3], compound: true },
+  { label: "12/8", groups: [3, 3, 3, 3], compound: true },
 ];
 
 export const TEMPO_MARKINGS: [number, string][] = [

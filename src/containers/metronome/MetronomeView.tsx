@@ -273,6 +273,7 @@ export function MetronomeView({
           <MeterPresets
             beatGroups={state.beatGroups}
             freeMode={state.freeMode}
+            compoundMeter={state.compoundMeter ?? false}
             customPattern={state.customPattern ?? []}
             stepper={
               <BeatStepper
@@ -280,6 +281,7 @@ export function MetronomeView({
                 subdivision={state.subdivision}
                 freeMode={state.freeMode}
                 onBeatGroupsChange={(next) => setBeatGroups(next)}
+                compoundMeter={state.compoundMeter ?? false}
                 customPattern={state.customPattern ?? []}
                 onCustomPatternChange={(next) => setCustomPattern(next)}
               />
@@ -299,6 +301,7 @@ export function MetronomeView({
           activeSub={activeSub}
           isDownbeat={isDownbeat}
           freeMode={state.freeMode}
+          compoundMeter={state.compoundMeter ?? false}
           accentMode={state.accentMode ?? "groups"}
           isAccentBeat={currentBeat?.isAccent ?? false}
           customPattern={state.customPattern ?? []}
@@ -326,31 +329,37 @@ export function MetronomeView({
         />
       </section>
 
-      <section className="sub-section" data-tour="subdivision">
-        <span className="stage-label">{t("metronome.subdivision")}</span>
-        {/* Only meaningful to call out once there's a custom pattern to
-            apply it to — the grouped/FREE meter has always used this
-            control and needs no extra explanation. */}
-        {(state.customPattern?.length ?? 0) > 0 && (
-          <span className="sub-custom-hint">{t("metronome.subdivisionCustomHint")}</span>
-        )}
-        <div className="sub-row">
-          {([1, 2, 3, 4, 5, 6] as Subdivision[]).map((sub, i) => (
-            <button
-              key={sub}
-              className={`sub-row-btn view-stagger-item ${state.subdivision === sub ? "active" : ""}`}
-              style={{ animationDelay: `${100 + i * 25}ms` }}
-              onClick={() => setSubdivision(sub)}
-            >
-              <SubdivisionIcon sub={sub} size={28} />
-              {/* The six glyphs are near-identical at a glance and used to need
-                  a tooltip to tell apart. Naming them is the fix — UI_DECISIONS
-                  U2.2. */}
-              <span className="sub-row-label">{t(`subdiv.${sub}`)}</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* A compound meter (6/8, 7/8, 8/8, 9/8, 12/8) derives its own
+          eighth-note rate from beatGroups — there is no coarser or finer
+          "Subdivision" to pick, so the control disappears rather than
+          offering choices the engine ignores. */}
+      {!(state.compoundMeter ?? false) && (
+        <section className="sub-section" data-tour="subdivision">
+          <span className="stage-label">{t("metronome.subdivision")}</span>
+          {/* Only meaningful to call out once there's a custom pattern to
+              apply it to — the grouped/FREE meter has always used this
+              control and needs no extra explanation. */}
+          {(state.customPattern?.length ?? 0) > 0 && (
+            <span className="sub-custom-hint">{t("metronome.subdivisionCustomHint")}</span>
+          )}
+          <div className="sub-row">
+            {([1, 2, 3, 4, 5, 6] as Subdivision[]).map((sub, i) => (
+              <button
+                key={sub}
+                className={`sub-row-btn view-stagger-item ${state.subdivision === sub ? "active" : ""}`}
+                style={{ animationDelay: `${100 + i * 25}ms` }}
+                onClick={() => setSubdivision(sub)}
+              >
+                <SubdivisionIcon sub={sub} size={28} />
+                {/* The six glyphs are near-identical at a glance and used to need
+                    a tooltip to tell apart. Naming them is the fix — UI_DECISIONS
+                    U2.2. */}
+                <span className="sub-row-label">{t(`subdiv.${sub}`)}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   );
 }

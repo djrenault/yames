@@ -645,6 +645,12 @@ struct CachedParams {
     /// — see the beat-boundary block in the callback.
     custom_pattern: Vec<u8>,
     custom_pattern_changed: bool,
+    /// Mirror of `SharedState::compound_meter`. True for an additive
+    /// eighth-based meter (6/8, 7/8, 8/8, 9/8, 12/8): each `beat_groups`
+    /// entry is then one real beat's own eighth-note count (2 or 3,
+    /// typically), not one of several equal-length beats in a group —
+    /// see the beat-boundary block's `compound_active` branch.
+    compound_meter: bool,
     ramp_active: bool,
     ramp_beats_per_bar: u8,
     ramp_warming_up: bool,
@@ -724,6 +730,16 @@ fn custom_pattern_level(pattern: &[u8], pos: u32) -> u8 {
         return 0;
     }
     pattern[pos as usize % pattern.len()]
+}
+
+/// This beat's own eighth-note count in a compound (additive) meter —
+/// `beat_groups[beat_index]`. A 7/8 bar's "2+2+3" is `[2, 2, 3]`: beat 0
+/// and beat 1 are each 2 eighth notes long, beat 2 is 3. Falls back to 2
+/// (a plain quarter-equivalent beat) for an out-of-range index, which
+/// `validate_beat_groups` never produces but this stays safe if it ever
+/// did.
+fn compound_beat_pulses(beat_groups: &[u8], beat_index: u32) -> u32 {
+    beat_groups.get(beat_index as usize).copied().unwrap_or(2) as u32
 }
 
 /// The click to play for a custom-pattern accent level, or `None` for a
@@ -1923,6 +1939,7 @@ impl MetronomeEngine {
                 beat_groups_changed: false,
                 custom_pattern: Vec::with_capacity(MAX_CUSTOM_PULSES),
                 custom_pattern_changed: false,
+                compound_meter: false,
                 ramp_active: false,
                 ramp_beats_per_bar: 4,
                 ramp_warming_up: false,
@@ -1998,6 +2015,16 @@ impl MetronomeEngine {
                             cached.custom_pattern.extend_from_slice(&s.custom_pattern);
                             cached.custom_pattern_changed = true;
                         }
+                        // A compound flip changes what `beat_groups` MEANS
+                        // (array length vs. its sum), so it needs the same
+                        // mid-play bar reset a `beat_groups` change gets —
+                        // piggybacking on `beat_groups_changed` rather than
+                        // its own flag, since the two always change together
+                        // in practice (picking a different meter preset).
+                        if s.compound_meter != cached.compound_meter {
+                            cached.compound_meter = s.compound_meter;
+                            cached.beat_groups_changed = true;
+                        }
                         cached.ramp_active = s.speed_ramp.active;
                         cached.ramp_beats_per_bar = s.speed_ramp.beats_per_bar;
                         // No `speed_ramp.active` here any more: a count-in is
@@ -2068,16 +2095,23 @@ impl MetronomeEngine {
                     // shape (`ramp_beats_per_bar`), the same way `accent_for`
                     // early-returns for a ramp.
                     let custom_active = !cached.custom_pattern.is_empty() && !cached.ramp_active;
-                    let subdivision = cached.subdivision as u32;
+                    // A compound meter (6/8, 7/8, 8/8, 9/8, 12/8) is an
+                    // additive grouping of eighth notes: `beat_groups` here
+                    // is not "N equal beats in a group" but one entry per
+                    // REAL beat, each holding that beat's own eighth-note
+                    // count (2 or 3, typically — a 7/8 bar's "2+2+3" is
+                    // three beats, not seven). `bpm` stays the quarter-note
+                    // tempo the ruler already shows, so one eighth is always
+                    // half a quarter, whatever beat it falls in — the
+                    // Subdivision picker (which would otherwise say
+                    // "quarter" or "sixteenth") doesn't apply, and the
+                    // frontend hides it while a compound meter is active.
+                    let compound_active = cached.compound_meter && !custom_active && !cached.ramp_active;
+                    let subdivision = if compound_active { 2 } else { cached.subdivision as u32 };
                     let beat_duration_secs = 60.0 / cached.bpm as f64;
                     let tick_duration_secs = beat_duration_secs / subdivision as f64;
                     let tick_samples = (tick_duration_secs * sr as f64) as u64;
                     let cap_samples = (tick_samples as f64 * 0.9) as usize;
-                    // The grouped/FREE path advances the pattern position
-                    // once every `subdivision` ticks (a "beat"); a custom
-                    // pattern advances it on every tick, since every tick
-                    // IS a pattern entry there.
-                    let measure_advance_period = if custom_active { 1 } else { subdivision };
 
                     // ---- Per-frame processing ----
                     for frame_idx in 0..frames {
@@ -2121,10 +2155,31 @@ impl MetronomeEngine {
                                 }
                             } else if custom_active {
                                 cached.custom_pattern.len() as u32
+                            } else if compound_active {
+                                // One entry per real beat, not per eighth
+                                // note — a 7/8 bar's "2+2+3" is 3 beats.
+                                cached.beat_groups.len() as u32
                             } else if cached.beat_groups_total >= 1 {
                                 cached.beat_groups_total
                             } else {
                                 4
+                            };
+
+                            // How many ticks until the pattern position
+                            // (`measure_beat`) advances. The grouped/FREE
+                            // path advances it once every `subdivision`
+                            // ticks (a beat); a custom pattern advances it
+                            // on every tick, since every tick IS a pattern
+                            // entry there. A compound meter advances it
+                            // after THIS beat's own eighth-note count —
+                            // `beat_groups[measure_beat]` — since a real
+                            // 7/8 bar's beats aren't all the same length.
+                            let measure_advance_period: u32 = if custom_active {
+                                1
+                            } else if compound_active {
+                                compound_beat_pulses(&cached.beat_groups, measure_beat)
+                            } else {
+                                subdivision
                             };
 
                             // Determine accent. A handful of integer ops
@@ -2149,7 +2204,13 @@ impl MetronomeEngine {
                                     cached.accent_mode,
                                     cached.ramp_active,
                                     cached.ramp_beats_per_bar,
-                                    cached.accent_mask,
+                                    // Compound: every `beat_groups` entry is
+                                    // already its own beat, so there is no
+                                    // "group start" to bit-mark beyond beat
+                                    // 0 — `cached.accent_mask` was built by
+                                    // cumulative sum for the OLD grouped
+                                    // meaning and does not apply.
+                                    if compound_active { 1 } else { cached.accent_mask },
                                     is_downbeat,
                                     beat_count,
                                     measure_beat,
@@ -2772,6 +2833,26 @@ mod tests {
         }
     }
 
+    /// A compound meter's accent mask is always `1` (bit 0 only): every
+    /// `beat_groups` entry is already its own beat, so there is no
+    /// group-start to mark beyond the bar's own downbeat. Only beat 0
+    /// accents; beats 1, 2, … are `is_downbeat`-but-not-accented, which
+    /// is exactly what makes them Medium rather than Strong or Weak in
+    /// the caller's gain selection.
+    #[test]
+    fn accent_for_compound_mask_accents_only_the_bar_downbeat() {
+        let compound_mask = 1u32;
+        // 7/8 as "2+2+3": 3 real beats.
+        for beat in 0..3u32 {
+            let expected = beat == 0;
+            assert_eq!(
+                accent_for(AccentMode::Groups, false, 4, compound_mask, true, beat, beat),
+                expected,
+                "beat {beat} of a compound 2+2+3"
+            );
+        }
+    }
+
     #[test]
     fn accent_mode_parses_and_falls_back() {
         assert!(AccentMode::from_str("all") == AccentMode::All);
@@ -3300,6 +3381,31 @@ mod tests {
     fn custom_pattern_level_of_an_empty_pattern_is_off() {
         assert_eq!(custom_pattern_level(&[], 0), 0);
         assert_eq!(custom_pattern_level(&[], 7), 0);
+    }
+
+    #[test]
+    fn compound_beat_pulses_reads_each_beats_own_eighth_count() {
+        // 7/8 as "2+2+3": three real beats, not seven.
+        let seven_eight = [2u8, 2, 3];
+        assert_eq!(compound_beat_pulses(&seven_eight, 0), 2);
+        assert_eq!(compound_beat_pulses(&seven_eight, 1), 2);
+        assert_eq!(compound_beat_pulses(&seven_eight, 2), 3);
+    }
+
+    #[test]
+    fn compound_beat_pulses_six_eight_is_two_beats_of_three() {
+        // The bug report this fixes: 6/8 must be 2 real beats (each 3
+        // eighth notes), not 6.
+        let six_eight = [3u8, 3];
+        assert_eq!(compound_beat_pulses(&six_eight, 0), 3);
+        assert_eq!(compound_beat_pulses(&six_eight, 1), 3);
+    }
+
+    #[test]
+    fn compound_beat_pulses_falls_back_to_a_plain_beat_out_of_range() {
+        // Not reachable through validate_beat_groups, but must not panic.
+        assert_eq!(compound_beat_pulses(&[3, 3], 5), 2);
+        assert_eq!(compound_beat_pulses(&[], 0), 2);
     }
 
     #[test]

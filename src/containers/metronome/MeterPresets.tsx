@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { defaultCustomPattern, METER_PRESETS, METER_VARIANTS } from "../../constants/metronome";
-import { setBeatGroups, setCustomPattern, setFreeMode } from "../../ipc";
+import { setBeatGroups, setCompoundMeter, setCustomPattern, setFreeMode } from "../../ipc";
 import { findMeterPreset, meterKey } from "../../utils/meter";
 
 interface MeterPresetsProps {
   beatGroups: number[];
   freeMode: boolean;
+  /** True for a 6/8-style additive meter — see AppState.compoundMeter. */
+  compoundMeter?: boolean;
   /** Non-empty when a custom accent pattern is active — see GroupEditor. */
   customPattern?: number[];
   /**
@@ -34,7 +36,13 @@ interface MeterPresetsProps {
  * the click accents group starts, and FREE mode is how you get none. Adding a
  * picker for behaviour the engine cannot produce would be a lie on the screen.
  */
-export function MeterPresets({ beatGroups, freeMode, customPattern = [], stepper }: MeterPresetsProps) {
+export function MeterPresets({
+  beatGroups,
+  freeMode,
+  compoundMeter = false,
+  customPattern = [],
+  stepper,
+}: MeterPresetsProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -72,18 +80,22 @@ export function MeterPresets({ beatGroups, freeMode, customPattern = [], stepper
   // and fires ONE debounced coach boundary for a burst of changes. Calling it
   // directly closed the practice segment on every click, ahead of the
   // debounce.
-  async function handleSelect(groups: number[]) {
+  async function handleSelect(groups: number[], compound: boolean) {
     if (freeMode) await setFreeMode(false);
     // Leaving Custom for a stock preset: without this the engine keeps
     // clicking the old custom pattern, since it takes over whenever it's
     // non-empty regardless of what beatGroups says.
     if (isCustom) await setCustomPattern([]);
+    // Set the interpretation before the array it applies to, so the
+    // engine never briefly reads the new groups under the old meaning.
+    if (compound !== compoundMeter) await setCompoundMeter(compound);
     await setBeatGroups(groups);
     setOpen(false);
   }
 
   async function handleSelectCustom() {
     if (!isCustom) {
+      if (compoundMeter) await setCompoundMeter(false);
       await setCustomPattern(defaultCustomPattern(4));
     }
     setOpen(false);
@@ -144,7 +156,7 @@ export function MeterPresets({ beatGroups, freeMode, customPattern = [], stepper
                   <button
                     key={key}
                     className={`meter-grouping-chip${on ? " active" : ""}`}
-                    onClick={() => void handleSelect(v)}
+                    onClick={() => void handleSelect(v, compoundMeter)}
                     aria-pressed={on}
                   >
                     {v.join(" + ")}
@@ -169,6 +181,7 @@ export function MeterPresets({ beatGroups, freeMode, customPattern = [], stepper
                 // itself — the invariant "freeMode ⇒ one group" is owned by
                 // Rust, so no second `setBeatGroups` round-trip is needed.
                 if (isCustom) void setCustomPattern([]);
+                if (compoundMeter) void setCompoundMeter(false);
                 setFreeMode(true);
                 setOpen(false);
               }}
@@ -179,7 +192,7 @@ export function MeterPresets({ beatGroups, freeMode, customPattern = [], stepper
               <button
                 key={preset.label}
                 className={`time-sig-btn ${activePreset?.label === preset.label ? "active" : ""}`}
-                onClick={() => handleSelect(preset.groups)}
+                onClick={() => handleSelect(preset.groups, preset.compound ?? false)}
               >
                 {preset.label}
               </button>
