@@ -7,13 +7,13 @@ import {
   getCalibrationCacheEntry,
   listAudioOutputDevices,
   setAudioOutputDevice,
-  setOutputChannel,
+  setOutputChannels,
 } from "../../ipc";
 import type { CalibrationCacheEntry } from "../../ipc";
 import { AudioOutputDropdown } from "../../components/AudioOutputDropdown";
 import { AudioInputDropdown } from "../../components/AudioInputDropdown";
 import { MidiDeviceDropdown } from "../../components/MidiDeviceDropdown";
-import { ChannelDropdown } from "../../components/ChannelDropdown";
+import { ChannelDropdown, channelLabel } from "../../components/ChannelDropdown";
 import type { useEvaluation } from "../../hooks/useEvaluation";
 import type { UseMidiReturn } from "../../hooks/useMidi";
 
@@ -47,8 +47,8 @@ export function DevicesSettingsSection({
   setAudioOutputDevices,
   selectedOutputDevice,
   setSelectedOutputDevice,
-  selectedOutputChannel,
-  setSelectedOutputChannel,
+  selectedOutputChannels,
+  setSelectedOutputChannels,
   evaluation,
   midi,
   onOpenInputTest,
@@ -58,8 +58,8 @@ export function DevicesSettingsSection({
   setAudioOutputDevices: Dispatch<SetStateAction<AudioOutputDevice[]>>;
   selectedOutputDevice: string;
   setSelectedOutputDevice: Dispatch<SetStateAction<string>>;
-  selectedOutputChannel: number;
-  setSelectedOutputChannel: Dispatch<SetStateAction<number>>;
+  selectedOutputChannels: number[];
+  setSelectedOutputChannels: Dispatch<SetStateAction<number[]>>;
   evaluation: EvaluationLike;
   midi: MidiLike;
   onOpenInputTest: () => void;
@@ -114,12 +114,12 @@ export function DevicesSettingsSection({
             onChange={(val) => {
               setSelectedOutputDevice(val);
               setAudioOutputDevice(val || null);
-              // A channel index chosen for the old device may not exist on
+              // Channel indices chosen for the old device may not exist on
               // the new one — reset to "all channels" rather than carry a
-              // stale index across (mirrors selectDevice's channel reset on
-              // the audio-input side).
-              setSelectedOutputChannel(-1);
-              setOutputChannel(null);
+              // stale selection across (mirrors selectDevice's channel
+              // reset on the audio-input side).
+              setSelectedOutputChannels([]);
+              setOutputChannels([]);
             }}
           />
           <button
@@ -145,20 +145,39 @@ export function DevicesSettingsSection({
         )}
         {/* Output channel picker — shown for any multi-channel device
             (≥ 2 ch). "All channels" (the default) duplicates the click
-            onto every channel; picking one routes it there exclusively,
-            e.g. channel 3 of an audio interface. */}
+            onto every channel; checking one or more specific channels
+            routes it there exclusively, e.g. just channel 3 of an audio
+            interface, or channels 3+4 together. */}
         {outputChannelCount > 1 && (
-          <div className="midi-device-row" style={{ marginTop: 8 }}>
-            <ChannelDropdown
-              channelCount={outputChannelCount}
-              value={selectedOutputChannel}
-              isInterface={false}
-              allLabel={t("settings.devices.allChannels")}
-              onChange={(ch) => {
-                setSelectedOutputChannel(ch);
-                setOutputChannel(ch === -1 ? null : ch);
+          <div className="output-channel-chips" style={{ marginTop: 8 }}>
+            <button
+              type="button"
+              className={`output-channel-chip ${selectedOutputChannels.length === 0 ? "active" : ""}`}
+              aria-pressed={selectedOutputChannels.length === 0}
+              onClick={() => {
+                setSelectedOutputChannels([]);
+                setOutputChannels([]);
               }}
-            />
+            >
+              {t("settings.devices.allChannels")}
+            </button>
+            {Array.from({ length: outputChannelCount }, (_, ch) => (
+              <button
+                key={ch}
+                type="button"
+                className={`output-channel-chip ${selectedOutputChannels.includes(ch) ? "active" : ""}`}
+                aria-pressed={selectedOutputChannels.includes(ch)}
+                onClick={() => {
+                  const next = selectedOutputChannels.includes(ch)
+                    ? selectedOutputChannels.filter((c) => c !== ch)
+                    : [...selectedOutputChannels, ch];
+                  setSelectedOutputChannels(next);
+                  setOutputChannels(next);
+                }}
+              >
+                {channelLabel(ch, false)}
+              </button>
+            ))}
           </div>
         )}
       </div>

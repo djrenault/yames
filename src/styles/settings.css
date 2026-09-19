@@ -1607,6 +1607,38 @@
   margin-top: 4px;
 }
 
+/* Output channel multi-select: one chip per channel plus an "all
+   channels" chip, any number of which can be active at once. */
+.output-channel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.output-channel-chip {
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text-primary) 3%, transparent);
+  color: var(--text-tertiary, var(--text-secondary));
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.output-channel-chip:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.output-channel-chip.active {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
 .audio-output-bt-badge {
   margin-left: auto;
   padding: 1px 5px;
