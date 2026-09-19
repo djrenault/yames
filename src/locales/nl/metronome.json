@@ -15,6 +15,15 @@
     "addBeat": "Beat toevoegen",
     "removeBeat": "Beat verwijderen",
     "grouping": "groepering",
+    "custom": "Aangepast",
+    "customCount": "Aangepast · {{count}}",
+    "customPulse": "Puls {{n}} — {{level}}",
+    "accentLevels": {
+      "off": "Uit",
+      "weak": "Zwak",
+      "medium": "Gemiddeld",
+      "strong": "Sterk"
+    },
     "tempo": "Tempo",
     "tempoUp": "Tempo omhoog",
     "tempoDown": "Tempo omlaag",

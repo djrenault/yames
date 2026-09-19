@@ -59,7 +59,7 @@ use commands::{
     save_window_position, set_active_tab, set_always_on_top,
     set_audio_output_device, set_bpm, set_calibration_offset, set_input_gain, set_instrument,
     set_output_channels,
-    set_beat_groups, set_free_mode, set_midi_binding, set_playing, set_sound_type, set_subdivision, set_theme,
+    set_beat_groups, set_custom_pattern, set_free_mode, set_midi_binding, set_playing, set_sound_type, set_subdivision, set_theme,
     app_ready, set_volume, set_widget_always_on_top, set_widget_mode, show_floating, show_main,
     start_evaluation, start_model_download, start_playback, start_recording, start_speed_ramp,
     start_speed_ramp_from, start_voice_repair, stop_evaluation, stop_playback, stop_recording,
@@ -190,6 +190,16 @@ pub fn run() {
                 s.beat_groups = groups;
                 s.time_signature = total;
                 s.free_mode = free_mode;
+                // Custom accent pattern — same validator as `set_custom_pattern`;
+                // anything it would reject falls back to empty (no custom
+                // pattern), same fallback shape as the beat-groups restore above.
+                if let Some(pattern) = store
+                    .get("customPattern")
+                    .and_then(|v| serde_json::from_value::<Vec<u8>>(v.clone()).ok())
+                    .filter(|p| commands::validate_custom_pattern(p).is_ok())
+                {
+                    s.custom_pattern = pattern;
+                }
                 if let Some(v) = store.get("instrument").and_then(|v| v.as_str().map(String::from)) {
                     let loaded = instrument::Instrument::from_id(&v);
                     // Migration guard: drums, piano, and "other" are now
@@ -567,6 +577,7 @@ pub fn run() {
             save_window_position,
             set_sound_type,
             set_beat_groups,
+            set_custom_pattern,
             set_free_mode,
             configure_speed_ramp,
             start_speed_ramp,

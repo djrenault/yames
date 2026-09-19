@@ -19,6 +19,7 @@ const DEFAULT_STATE: AppState = {
   beatGroups: [4],
   freeMode: false,
   accentMode: "groups" as const,
+  customPattern: [],
   countIn: { beats: 0, done: 0 },
   speedRamp: {
     startBpm: 80,

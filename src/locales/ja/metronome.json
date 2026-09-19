@@ -15,6 +15,15 @@
     "addBeat": "拍を追加",
     "removeBeat": "拍を削除",
     "grouping": "グループ分け",
+    "custom": "カスタム",
+    "customCount": "カスタム・{{count}}",
+    "customPulse": "パルス {{n}} — {{level}}",
+    "accentLevels": {
+      "off": "オフ",
+      "weak": "弱",
+      "medium": "中",
+      "strong": "強"
+    },
     "tempo": "テンポ",
     "tempoUp": "テンポを上げる",
     "tempoDown": "テンポを下げる",

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { AppState, BeatEvent, Subdivision } from "../../types";
 // BeatEvent used for evaluation feedback; Subdivision for sub-row cast
 import type { useEvaluation } from "../../hooks/useEvaluation";
-import { setSubdivision, setBeatGroups } from "../../ipc";
+import { setSubdivision, setBeatGroups, setCustomPattern } from "../../ipc";
 import {
   getTempoMarking,
   getTempoScale,
@@ -273,18 +273,22 @@ export function MetronomeView({
           <MeterPresets
             beatGroups={state.beatGroups}
             freeMode={state.freeMode}
+            customPattern={state.customPattern ?? []}
             stepper={
               <BeatStepper
                 beatGroups={state.beatGroups}
                 subdivision={state.subdivision}
                 freeMode={state.freeMode}
                 onBeatGroupsChange={(next) => setBeatGroups(next)}
+                customPattern={state.customPattern ?? []}
+                onCustomPatternChange={(next) => setCustomPattern(next)}
               />
             }
           />
           {/* Right of the meter row, as the artboard draws it: the meter says
-              where the accents fall, and this says whether they fall at all. */}
-          <AccentControl mode={state.accentMode} />
+              where the accents fall, and this says whether they fall at all.
+              Not meaningful once every pulse has its own explicit level. */}
+          {!(state.customPattern?.length > 0) && <AccentControl mode={state.accentMode} />}
         </div>
 
         <GroupEditor
@@ -297,6 +301,8 @@ export function MetronomeView({
           freeMode={state.freeMode}
           accentMode={state.accentMode ?? "groups"}
           isAccentBeat={currentBeat?.isAccent ?? false}
+          customPattern={state.customPattern ?? []}
+          onCustomPatternChange={(next) => setCustomPattern(next)}
           feedback={dotFeedback}
           onBeatGroupsChange={(next) => {
             // No notifySettingsChange() — useSession watches the meter

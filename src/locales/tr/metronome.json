@@ -15,6 +15,15 @@
     "addBeat": "Vuruş ekle",
     "removeBeat": "Vuruş çıkar",
     "grouping": "gruplama",
+    "custom": "Özel",
+    "customCount": "Özel · {{count}}",
+    "customPulse": "Vuruş {{n}} — {{level}}",
+    "accentLevels": {
+      "off": "Kapalı",
+      "weak": "Zayıf",
+      "medium": "Orta",
+      "strong": "Güçlü"
+    },
     "tempo": "Tempo",
     "tempoUp": "Tempoyu artır",
     "tempoDown": "Tempoyu azalt",

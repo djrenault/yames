@@ -267,3 +267,43 @@ export function removeBeatFromLastGroup(groups: number[]): number[] {
   }
   return groups;
 }
+
+/**
+ * Custom accent pattern — one entry per pulse, level 0-3
+ * (Off/Weak/Medium/Strong). Mirrors `MAX_CUSTOM_PULSES` /
+ * `validate_custom_pattern` in `src-tauri/src/commands.rs`.
+ */
+export const MIN_CUSTOM_PULSES = 1;
+export const MAX_CUSTOM_PULSES = 32;
+
+/**
+ * What a fresh custom pattern starts as: an accent on the first pulse,
+ * Weak everywhere else — a reasonable default for "I don't know yet",
+ * and the shape most meters actually want on beat 1.
+ */
+export function defaultCustomPattern(pulses: number): number[] {
+  const n = Math.max(MIN_CUSTOM_PULSES, Math.min(MAX_CUSTOM_PULSES, pulses));
+  return Array.from({ length: n }, (_, i) => (i === 0 ? 3 : 1));
+}
+
+/** Off → Weak → Medium → Strong → Off. */
+export function cycleAccentLevel(level: number): number {
+  return (level + 1) % 4;
+}
+
+/** `pattern` with pulse `index` advanced one accent level. */
+export function withPulseCycled(pattern: number[], index: number): number[] {
+  return pattern.map((level, i) => (i === index ? cycleAccentLevel(level) : level));
+}
+
+/** One more pulse, appended as Weak. No-op at `MAX_CUSTOM_PULSES`. */
+export function addCustomPulse(pattern: number[]): number[] {
+  if (pattern.length >= MAX_CUSTOM_PULSES) return pattern;
+  return [...pattern, 1];
+}
+
+/** One fewer pulse, from the end. No-op at `MIN_CUSTOM_PULSES`. */
+export function removeCustomPulse(pattern: number[]): number[] {
+  if (pattern.length <= MIN_CUSTOM_PULSES) return pattern;
+  return pattern.slice(0, -1);
+}

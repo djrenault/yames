@@ -139,6 +139,14 @@ pub struct AppState {
     #[serde(rename = "accentMode", default = "default_accent_mode")]
     pub accent_mode: String,
 
+    /// Per-pulse accent levels (0=Off, 1=Weak, 2=Medium, 3=Strong),
+    /// replacing `beat_groups` + `subdivision` + `accent_mode` entirely
+    /// for this bar when non-empty. Empty (the default) means "no
+    /// custom pattern" — everything behaves exactly as it always has.
+    /// See `validate_custom_pattern` in commands.rs.
+    #[serde(rename = "customPattern", default)]
+    pub custom_pattern: Vec<u8>,
+
     /// The live count-in. See `CountIn` — it is not the ramp's any more.
     #[serde(rename = "countIn", default)]
     pub count_in: CountIn,
@@ -177,6 +185,7 @@ impl Default for AppState {
             free_mode: false,
             speed_ramp: SpeedRamp::default(),
             accent_mode: default_accent_mode(),
+            custom_pattern: Vec::new(),
             count_in: CountIn::default(),
             instrument: Instrument::default(),
         }

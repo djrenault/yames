@@ -83,6 +83,15 @@ export async function setBeatGroups(groups: number[]): Promise<void> {
   return invoke("set_beat_groups", { groups });
 }
 
+/**
+ * Per-pulse accent levels (0=Off, 1=Weak, 2=Medium, 3=Strong), replacing
+ * beatGroups + subdivision + accentMode entirely for this bar. Pass `[]`
+ * to clear back to the ordinary meter.
+ */
+export async function setCustomPattern(pattern: number[]): Promise<void> {
+  return invoke("set_custom_pattern", { pattern });
+}
+
 export async function setFreeMode(enabled: boolean): Promise<void> {
   return invoke("set_free_mode", { enabled });
 }

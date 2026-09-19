@@ -15,6 +15,15 @@
     "addBeat": "박 추가",
     "removeBeat": "박 제거",
     "grouping": "그룹",
+    "custom": "커스텀",
+    "customCount": "커스텀 · {{count}}",
+    "customPulse": "펄스 {{n}} — {{level}}",
+    "accentLevels": {
+      "off": "끄기",
+      "weak": "약",
+      "medium": "중간",
+      "strong": "강"
+    },
     "tempo": "템포",
     "tempoUp": "템포 올리기",
     "tempoDown": "템포 내리기",

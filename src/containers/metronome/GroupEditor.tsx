@@ -1,6 +1,11 @@
 import { useTranslation } from "react-i18next";
 import type { BeatFeedback } from "../../types";
 import { accentPositions, meterTotal } from "../../utils/meter";
+import { withPulseCycled } from "../../constants/metronome";
+
+/** Accent-level index (0-3) → the CSS class rendering that tier. */
+const LEVEL_CLASS = ["level-off", "level-weak", "level-medium", "accent"];
+const LEVEL_NAME_KEYS = ["off", "weak", "medium", "strong"];
 
 interface GroupEditorProps {
   beatGroups: number[];
@@ -14,6 +19,16 @@ interface GroupEditorProps {
   accentMode?: "groups" | "all" | "none";
   /** `BeatEvent.isAccent` for the beat currently lit. */
   isAccentBeat?: boolean;
+  /**
+   * Per-pulse accent levels (0=Off, 1=Weak, 2=Medium, 3=Strong). Non-empty
+   * replaces the grouped/FREE dot row entirely with an editable flat row —
+   * see Round 1 of the custom-subdivision feature. Each dot is a button
+   * that cycles its own level; there is no separate "grouping" concept
+   * left once every pulse has its own explicit accent.
+   */
+  customPattern?: number[];
+  /** Called with the whole pattern when a dot is clicked (custom mode only). */
+  onCustomPatternChange?: (next: number[]) => void;
   /**
    * Per-beat evaluation feedback, keyed by bar position. Renders the
    * `feedback-<classification>` tint the pre-grouping beat dots had —
@@ -41,6 +56,8 @@ export function GroupEditor({
   freeMode = false,
   accentMode = "groups",
   isAccentBeat = false,
+  customPattern = [],
+  onCustomPatternChange,
   feedback,
 }: GroupEditorProps) {
   const { t } = useTranslation();
@@ -48,6 +65,32 @@ export function GroupEditor({
   // Static markers only — the LIVE accent comes from the engine via
   // `isAccentBeat`, so the two can never disagree.
   const accents = accentPositions(beatGroups, accentMode);
+
+  if (customPattern.length > 0) {
+    return (
+      <div className="group-editor">
+        <div className="free-dots custom-pattern-dots">
+          {customPattern.map((level, i) => {
+            const isActive = isPlaying && activeBeat === i;
+            const fb = feedback?.get(i);
+            const feedbackClass = fb && isActive ? `feedback-${fb.classification}` : "";
+            return (
+              <button
+                key={i}
+                type="button"
+                className={`group-dot editable ${LEVEL_CLASS[level] ?? "level-weak"} ${isActive ? "playing" : ""} ${feedbackClass}`}
+                onClick={() => onCustomPatternChange?.(withPulseCycled(customPattern, i))}
+                aria-label={t("metronome.customPulse", {
+                  n: i + 1,
+                  level: t(`metronome.accentLevels.${LEVEL_NAME_KEYS[level] ?? "weak"}`),
+                })}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   if (freeMode) {
     return (

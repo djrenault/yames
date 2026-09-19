@@ -1066,6 +1066,33 @@
   box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 7%, transparent);
 }
 
+/* Custom pattern's middle tier — a lighter version of `.accent`'s ring,
+   with no glow. Sits visually between plain (Weak) and `.accent` (Strong),
+   the same three-tier hierarchy the click already had in audio but never
+   had dots for. */
+.group-dot.level-medium {
+  border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* Off — a deliberately silent pulse. Dashed rather than solid, so it
+   reads as "nothing plays here" and not as a fourth accent color. */
+.group-dot.level-off {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--text-primary) 10%, transparent);
+}
+
+/* The custom editor's dots are buttons, not divs — every one is
+   clickable, so the row needs the affordances a read-only meter dot
+   never did. */
+.group-dot.editable {
+  cursor: pointer;
+  padding: 0;
+}
+
+.group-dot.editable:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
 .group-dot.playing {
   transform: scale(1.35);
   background: var(--text-primary);

@@ -15,6 +15,15 @@
     "addBeat": "Add beat",
     "removeBeat": "Remove beat",
     "grouping": "grouping",
+    "custom": "Custom",
+    "customCount": "Custom · {{count}}",
+    "customPulse": "Pulse {{n}} — {{level}}",
+    "accentLevels": {
+      "off": "Off",
+      "weak": "Weak",
+      "medium": "Medium",
+      "strong": "Strong"
+    },
     "tempo": "Tempo",
     "tempoUp": "Tempo up",
     "tempoDown": "Tempo down",

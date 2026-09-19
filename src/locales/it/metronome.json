@@ -15,6 +15,15 @@
     "addBeat": "Aggiungi colpo",
     "removeBeat": "Rimuovi colpo",
     "grouping": "raggruppamento",
+    "custom": "Personalizzato",
+    "customCount": "Personalizzato · {{count}}",
+    "customPulse": "Impulso {{n}} — {{level}}",
+    "accentLevels": {
+      "off": "Disattivato",
+      "weak": "Debole",
+      "medium": "Medio",
+      "strong": "Forte"
+    },
     "tempo": "Tempo",
     "tempoUp": "Aumenta il tempo",
     "tempoDown": "Riduci il tempo",

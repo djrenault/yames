@@ -15,6 +15,15 @@
     "addBeat": "Ajouter un temps",
     "removeBeat": "Retirer un temps",
     "grouping": "groupement",
+    "custom": "Personnalisé",
+    "customCount": "Personnalisé · {{count}}",
+    "customPulse": "Pulsation {{n}} — {{level}}",
+    "accentLevels": {
+      "off": "Désactivé",
+      "weak": "Faible",
+      "medium": "Moyen",
+      "strong": "Fort"
+    },
     "tempo": "Tempo",
     "tempoUp": "Accélérer le tempo",
     "tempoDown": "Ralentir le tempo",

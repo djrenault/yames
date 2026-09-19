@@ -15,6 +15,15 @@
     "addBeat": "Thêm phách",
     "removeBeat": "Bớt phách",
     "grouping": "nhóm nhịp",
+    "custom": "Tùy chỉnh",
+    "customCount": "Tùy chỉnh · {{count}}",
+    "customPulse": "Nhịp {{n}} — {{level}}",
+    "accentLevels": {
+      "off": "Tắt",
+      "weak": "Yếu",
+      "medium": "Trung bình",
+      "strong": "Mạnh"
+    },
     "tempo": "Nhịp độ",
     "tempoUp": "Tăng nhịp độ",
     "tempoDown": "Giảm nhịp độ",

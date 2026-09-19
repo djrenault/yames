@@ -15,6 +15,15 @@
     "addBeat": "Beat hinzufügen",
     "removeBeat": "Beat entfernen",
     "grouping": "Gruppierung",
+    "custom": "Benutzerdefiniert",
+    "customCount": "Benutzerdefiniert · {{count}}",
+    "customPulse": "Puls {{n}} — {{level}}",
+    "accentLevels": {
+      "off": "Aus",
+      "weak": "Schwach",
+      "medium": "Mittel",
+      "strong": "Stark"
+    },
     "tempo": "Tempo",
     "tempoUp": "Tempo erhöhen",
     "tempoDown": "Tempo verringern",

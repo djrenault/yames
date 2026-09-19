@@ -90,6 +90,7 @@ fn persist_state(state: &SharedState, app_handle: &AppHandle) {
         store.set("timeSignature", serde_json::json!(s.time_signature));
         store.set("beatGroups", serde_json::json!(s.beat_groups));
         store.set("freeMode", serde_json::json!(s.free_mode));
+        store.set("customPattern", serde_json::json!(s.custom_pattern));
         store.set(
             "speedRamp",
             serde_json::json!({
@@ -696,6 +697,45 @@ pub fn set_accent_mode(mode: String, state: State<SharedState>, app_handle: AppH
     }
     emit_state_changed(&state, &app_handle);
     persist_state(&state, &app_handle);
+}
+
+/// Largest custom accent pattern (`MetronomeEngine`'s bitmask-free
+/// per-pulse levels have no `u32`-width reason to cap lower than this;
+/// 32 eighth notes is already a four-bar phrase).
+pub const MAX_CUSTOM_PULSES: usize = 32;
+/// Highest accent level a pulse can hold: 0=Off, 1=Weak, 2=Medium, 3=Strong.
+pub const MAX_ACCENT_LEVEL: u8 = 3;
+
+/// Validation half of [`set_custom_pattern`], split out so it can be
+/// unit-tested without a Tauri `State` / `AppHandle`. An empty pattern is
+/// always valid — it's how a caller clears back to `beat_groups` +
+/// `subdivision`.
+pub fn validate_custom_pattern(pattern: &[u8]) -> Result<(), String> {
+    if pattern.len() > MAX_CUSTOM_PULSES {
+        return Err(format!("pattern: at most {MAX_CUSTOM_PULSES} pulses"));
+    }
+    if pattern.iter().any(|&level| level > MAX_ACCENT_LEVEL) {
+        return Err(format!("each pulse: 0–{MAX_ACCENT_LEVEL}"));
+    }
+    Ok(())
+}
+
+/// Set (or clear, with an empty `Vec`) the custom per-pulse accent
+/// pattern. See `AppState::custom_pattern`.
+#[tauri::command]
+pub fn set_custom_pattern(
+    pattern: Vec<u8>,
+    state: State<SharedState>,
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    validate_custom_pattern(&pattern)?;
+    {
+        let mut s = state.lock().unwrap();
+        s.custom_pattern = pattern;
+    }
+    emit_state_changed(&state, &app_handle);
+    persist_state(&state, &app_handle);
+    Ok(())
 }
 
 #[tauri::command]
@@ -2515,6 +2555,36 @@ mod tests {
     fn validate_beat_groups_rejects_a_zero_beat_group() {
         assert!(validate_beat_groups(&[0]).is_err());
         assert!(validate_beat_groups(&[3, 0, 2]).is_err());
+    }
+
+    #[test]
+    fn validate_custom_pattern_accepts_an_empty_pattern() {
+        // Empty is how a caller clears back to beat_groups + subdivision.
+        assert!(validate_custom_pattern(&[]).is_ok());
+    }
+
+    #[test]
+    fn validate_custom_pattern_accepts_the_correct_six_eight() {
+        // Strong-weak-weak-Medium-weak-weak: 2 real beats of 3, the fix for
+        // the "6/8 plays a spurious mid-group accent" bug.
+        assert!(validate_custom_pattern(&[3, 1, 1, 2, 1, 1]).is_ok());
+    }
+
+    #[test]
+    fn validate_custom_pattern_accepts_the_maximum_pulse_count() {
+        assert!(validate_custom_pattern(&[1; MAX_CUSTOM_PULSES]).is_ok());
+    }
+
+    #[test]
+    fn validate_custom_pattern_rejects_too_many_pulses() {
+        let err = validate_custom_pattern(&[1; MAX_CUSTOM_PULSES + 1]).unwrap_err();
+        assert_eq!(err, "pattern: at most 32 pulses");
+    }
+
+    #[test]
+    fn validate_custom_pattern_rejects_a_level_above_strong() {
+        let err = validate_custom_pattern(&[0, 1, 4]).unwrap_err();
+        assert_eq!(err, "each pulse: 0–3");
     }
 
     #[test]

@@ -15,6 +15,15 @@
     "addBeat": "Dodaj uderzenie",
     "removeBeat": "Usuń uderzenie",
     "grouping": "grupowanie",
+    "custom": "Niestandardowy",
+    "customCount": "Niestandardowy · {{count}}",
+    "customPulse": "Puls {{n}} — {{level}}",
+    "accentLevels": {
+      "off": "Wyłączony",
+      "weak": "Słaby",
+      "medium": "Średni",
+      "strong": "Mocny"
+    },
     "tempo": "Tempo",
     "tempoUp": "Zwiększ tempo",
     "tempoDown": "Zmniejsz tempo",

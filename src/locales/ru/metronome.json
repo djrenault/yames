@@ -15,6 +15,15 @@
     "addBeat": "Добавить долю",
     "removeBeat": "Убрать долю",
     "grouping": "группировка",
+    "custom": "Пользовательский",
+    "customCount": "Пользовательский · {{count}}",
+    "customPulse": "Импульс {{n}} — {{level}}",
+    "accentLevels": {
+      "off": "Выкл",
+      "weak": "Слабый",
+      "medium": "Средний",
+      "strong": "Сильный"
+    },
     "tempo": "Темп",
     "tempoUp": "Быстрее",
     "tempoDown": "Медленнее",

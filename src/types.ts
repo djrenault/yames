@@ -63,6 +63,15 @@ export type AppState = {
    * the grouping the dots draw.
    */
   accentMode: "groups" | "all" | "none";
+  /**
+   * Per-pulse accent levels (0=Off, 1=Weak, 2=Medium, 3=Strong), one
+   * entry per audible click in the bar. Non-empty replaces `beatGroups`
+   * + `subdivision` + `accentMode` entirely for this bar — see
+   * `AccentLevel` and the custom-pattern branch in engine.rs. Empty (the
+   * default) means "no custom pattern": everything behaves exactly as
+   * it always has.
+   */
+  customPattern: number[];
   speedRamp: SpeedRamp;
   /**
    * The live count-in, which belongs to the engine rather than to the drill
@@ -86,7 +95,12 @@ export type BeatEvent = {
    * engine is the only thing that knows which rule applied.
    */
   isAccent: boolean;
+  /** 0=Off, 1=Weak, 2=Medium, 3=Strong — see `AppState.customPattern`. */
+  accentLevel: number;
 };
+
+/** 0=Off, 1=Weak, 2=Medium, 3=Strong — one custom-pattern pulse. */
+export type AccentLevel = 0 | 1 | 2 | 3;
 
 // ---------------------------------------------------------------------------
 // MIDI types

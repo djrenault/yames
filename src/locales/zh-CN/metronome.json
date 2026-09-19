@@ -15,6 +15,15 @@
     "addBeat": "增加一拍",
     "removeBeat": "减少一拍",
     "grouping": "分组",
+    "custom": "自定义",
+    "customCount": "自定义 · {{count}}",
+    "customPulse": "脉冲 {{n}} — {{level}}",
+    "accentLevels": {
+      "off": "关闭",
+      "weak": "弱",
+      "medium": "中",
+      "strong": "强"
+    },
     "tempo": "速度",
     "tempoUp": "提高速度",
     "tempoDown": "降低速度",
