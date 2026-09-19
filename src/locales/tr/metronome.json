@@ -18,11 +18,12 @@
     "custom": "Özel",
     "customCount": "Özel · {{count}}",
     "customPulse": "Vuruş {{n}} — {{level}}",
+    "subdivisionCustomHint": "Özel deseninizdeki her vuruşun hızını ayarlar",
     "accentLevels": {
       "off": "Kapalı",
-      "weak": "Zayıf",
-      "medium": "Orta",
-      "strong": "Güçlü"
+      "weak": "Hafif",
+      "medium": "Normal",
+      "strong": "Vurgu"
     },
     "tempo": "Tempo",
     "tempoUp": "Tempoyu artır",

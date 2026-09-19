@@ -18,11 +18,12 @@
     "custom": "Пользовательский",
     "customCount": "Пользовательский · {{count}}",
     "customPulse": "Импульс {{n}} — {{level}}",
+    "subdivisionCustomHint": "Задаёт скорость каждого импульса в вашем пользовательском паттерне",
     "accentLevels": {
       "off": "Выкл",
-      "weak": "Слабый",
-      "medium": "Средний",
-      "strong": "Сильный"
+      "weak": "Тихо",
+      "medium": "Обычный",
+      "strong": "Акцент"
     },
     "tempo": "Темп",
     "tempoUp": "Быстрее",

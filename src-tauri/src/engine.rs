@@ -2060,17 +2060,24 @@ impl MetronomeEngine {
                     }
 
                     // ---- Timing ----
-                    // A custom accent pattern replaces `subdivision` with "one
-                    // pulse per pattern entry" — see the beat-boundary block
-                    // below. It never applies during a speed ramp, which owns
-                    // its own bar/accent shape (`ramp_beats_per_bar`), the
-                    // same way `accent_for` early-returns for a ramp.
+                    // A custom accent pattern maps one pattern entry to one
+                    // *subdivision* tick, not one main beat — "6 pulses" at
+                    // subdivision=2 (Eighth) plays in the time of 3 quarter
+                    // notes, the same as a real 6/8 bar. It never applies
+                    // during a speed ramp, which owns its own bar/accent
+                    // shape (`ramp_beats_per_bar`), the same way `accent_for`
+                    // early-returns for a ramp.
                     let custom_active = !cached.custom_pattern.is_empty() && !cached.ramp_active;
-                    let subdivision = if custom_active { 1 } else { cached.subdivision as u32 };
+                    let subdivision = cached.subdivision as u32;
                     let beat_duration_secs = 60.0 / cached.bpm as f64;
                     let tick_duration_secs = beat_duration_secs / subdivision as f64;
                     let tick_samples = (tick_duration_secs * sr as f64) as u64;
                     let cap_samples = (tick_samples as f64 * 0.9) as usize;
+                    // The grouped/FREE path advances the pattern position
+                    // once every `subdivision` ticks (a "beat"); a custom
+                    // pattern advances it on every tick, since every tick
+                    // IS a pattern entry there.
+                    let measure_advance_period = if custom_active { 1 } else { subdivision };
 
                     // ---- Per-frame processing ----
                     for frame_idx in 0..frames {
@@ -2215,7 +2222,7 @@ impl MetronomeEngine {
                             // Advance counters
                             let mut bar_complete = false;
                             sub_count += 1;
-                            if sub_count >= subdivision {
+                            if sub_count >= measure_advance_period {
                                 sub_count = 0;
                                 beat_count += 1;
                                 measure_beat += 1;

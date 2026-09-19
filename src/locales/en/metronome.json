@@ -18,11 +18,12 @@
     "custom": "Custom",
     "customCount": "Custom · {{count}}",
     "customPulse": "Pulse {{n}} — {{level}}",
+    "subdivisionCustomHint": "Sets how fast each pulse in your custom pattern plays",
     "accentLevels": {
       "off": "Off",
-      "weak": "Weak",
-      "medium": "Medium",
-      "strong": "Strong"
+      "weak": "Quiet",
+      "medium": "Normal",
+      "strong": "Accent"
     },
     "tempo": "Tempo",
     "tempoUp": "Tempo up",

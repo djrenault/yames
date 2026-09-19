@@ -18,11 +18,12 @@
     "custom": "Benutzerdefiniert",
     "customCount": "Benutzerdefiniert · {{count}}",
     "customPulse": "Puls {{n}} — {{level}}",
+    "subdivisionCustomHint": "Legt fest, wie schnell jeder Puls in deinem eigenen Muster gespielt wird",
     "accentLevels": {
       "off": "Aus",
-      "weak": "Schwach",
-      "medium": "Mittel",
-      "strong": "Stark"
+      "weak": "Leise",
+      "medium": "Normal",
+      "strong": "Akzent"
     },
     "tempo": "Tempo",
     "tempoUp": "Tempo erhöhen",

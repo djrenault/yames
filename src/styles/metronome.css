@@ -1814,6 +1814,16 @@ span.meter-grouping-chip {
   line-height: 1;
 }
 
+/* Only shown once a custom pattern makes this control do something new —
+   see MetronomeView. Plain, unlabelled prose beside the SUBDIVISION
+   caption, not a warning: it's context, not a problem. */
+.sub-custom-hint {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
 .main-content[data-view="beat"] .bpm-display {
   align-items: flex-end;
   gap: 18px;

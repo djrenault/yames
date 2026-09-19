@@ -18,11 +18,12 @@
     "custom": "Personnalisé",
     "customCount": "Personnalisé · {{count}}",
     "customPulse": "Pulsation {{n}} — {{level}}",
+    "subdivisionCustomHint": "Définit la vitesse de chaque pulsation de votre motif personnalisé",
     "accentLevels": {
       "off": "Désactivé",
-      "weak": "Faible",
-      "medium": "Moyen",
-      "strong": "Fort"
+      "weak": "Doux",
+      "medium": "Normal",
+      "strong": "Accent"
     },
     "tempo": "Tempo",
     "tempoUp": "Accélérer le tempo",

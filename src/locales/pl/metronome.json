@@ -18,11 +18,12 @@
     "custom": "Niestandardowy",
     "customCount": "Niestandardowy · {{count}}",
     "customPulse": "Puls {{n}} — {{level}}",
+    "subdivisionCustomHint": "Określa, jak szybko odtwarzany jest każdy puls we wzorze niestandardowym",
     "accentLevels": {
       "off": "Wyłączony",
-      "weak": "Słaby",
-      "medium": "Średni",
-      "strong": "Mocny"
+      "weak": "Cicho",
+      "medium": "Normalny",
+      "strong": "Akcent"
     },
     "tempo": "Tempo",
     "tempoUp": "Zwiększ tempo",

@@ -18,11 +18,12 @@
     "custom": "커스텀",
     "customCount": "커스텀 · {{count}}",
     "customPulse": "펄스 {{n}} — {{level}}",
+    "subdivisionCustomHint": "커스텀 패턴의 각 펄스 속도를 설정합니다",
     "accentLevels": {
       "off": "끄기",
-      "weak": "약",
-      "medium": "중간",
-      "strong": "강"
+      "weak": "조용히",
+      "medium": "보통",
+      "strong": "강조"
     },
     "tempo": "템포",
     "tempoUp": "템포 올리기",

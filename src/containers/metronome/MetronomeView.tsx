@@ -328,6 +328,12 @@ export function MetronomeView({
 
       <section className="sub-section" data-tour="subdivision">
         <span className="stage-label">{t("metronome.subdivision")}</span>
+        {/* Only meaningful to call out once there's a custom pattern to
+            apply it to — the grouped/FREE meter has always used this
+            control and needs no extra explanation. */}
+        {(state.customPattern?.length ?? 0) > 0 && (
+          <span className="sub-custom-hint">{t("metronome.subdivisionCustomHint")}</span>
+        )}
         <div className="sub-row">
           {([1, 2, 3, 4, 5, 6] as Subdivision[]).map((sub, i) => (
             <button

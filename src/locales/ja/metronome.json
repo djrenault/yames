@@ -18,11 +18,12 @@
     "custom": "カスタム",
     "customCount": "カスタム・{{count}}",
     "customPulse": "パルス {{n}} — {{level}}",
+    "subdivisionCustomHint": "カスタムパターンの各パルスの速さを設定します",
     "accentLevels": {
       "off": "オフ",
-      "weak": "弱",
-      "medium": "中",
-      "strong": "強"
+      "weak": "控えめ",
+      "medium": "普通",
+      "strong": "アクセント"
     },
     "tempo": "テンポ",
     "tempoUp": "テンポを上げる",

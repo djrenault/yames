@@ -18,11 +18,12 @@
     "custom": "Personalizzato",
     "customCount": "Personalizzato · {{count}}",
     "customPulse": "Impulso {{n}} — {{level}}",
+    "subdivisionCustomHint": "Imposta la velocità di ogni impulso nel tuo pattern personalizzato",
     "accentLevels": {
       "off": "Disattivato",
-      "weak": "Debole",
-      "medium": "Medio",
-      "strong": "Forte"
+      "weak": "Leggero",
+      "medium": "Normale",
+      "strong": "Accento"
     },
     "tempo": "Tempo",
     "tempoUp": "Aumenta il tempo",

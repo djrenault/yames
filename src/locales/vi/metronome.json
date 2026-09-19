@@ -18,11 +18,12 @@
     "custom": "Tùy chỉnh",
     "customCount": "Tùy chỉnh · {{count}}",
     "customPulse": "Nhịp {{n}} — {{level}}",
+    "subdivisionCustomHint": "Đặt tốc độ phát của mỗi nhịp trong mẫu tùy chỉnh của bạn",
     "accentLevels": {
       "off": "Tắt",
-      "weak": "Yếu",
-      "medium": "Trung bình",
-      "strong": "Mạnh"
+      "weak": "Nhẹ",
+      "medium": "Bình thường",
+      "strong": "Nhấn mạnh"
     },
     "tempo": "Nhịp độ",
     "tempoUp": "Tăng nhịp độ",

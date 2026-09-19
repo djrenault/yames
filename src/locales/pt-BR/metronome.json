@@ -18,11 +18,12 @@
     "custom": "Personalizado",
     "customCount": "Personalizado · {{count}}",
     "customPulse": "Pulso {{n}} — {{level}}",
+    "subdivisionCustomHint": "Define a velocidade de cada pulso no seu padrão personalizado",
     "accentLevels": {
       "off": "Desativado",
-      "weak": "Fraco",
-      "medium": "Médio",
-      "strong": "Forte"
+      "weak": "Suave",
+      "medium": "Normal",
+      "strong": "Acento"
     },
     "tempo": "Andamento",
     "tempoUp": "Aumentar o andamento",

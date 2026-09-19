@@ -18,11 +18,12 @@
     "custom": "Aangepast",
     "customCount": "Aangepast · {{count}}",
     "customPulse": "Puls {{n}} — {{level}}",
+    "subdivisionCustomHint": "Bepaalt hoe snel elke puls in je aangepaste patroon speelt",
     "accentLevels": {
       "off": "Uit",
-      "weak": "Zwak",
-      "medium": "Gemiddeld",
-      "strong": "Sterk"
+      "weak": "Zacht",
+      "medium": "Normaal",
+      "strong": "Accent"
     },
     "tempo": "Tempo",
     "tempoUp": "Tempo omhoog",

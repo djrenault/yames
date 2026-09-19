@@ -18,11 +18,12 @@
     "custom": "自訂",
     "customCount": "自訂 · {{count}}",
     "customPulse": "脈衝 {{n}} — {{level}}",
+    "subdivisionCustomHint": "設定自訂節奏中每個脈衝的播放速度",
     "accentLevels": {
       "off": "關閉",
-      "weak": "弱",
-      "medium": "中",
-      "strong": "強"
+      "weak": "輕聲",
+      "medium": "普通",
+      "strong": "重音"
     },
     "tempo": "速度",
     "tempoUp": "提高速度",
