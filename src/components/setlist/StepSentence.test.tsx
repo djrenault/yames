@@ -124,6 +124,52 @@ describe("the meter window", () => {
     expect(within(dialog).getByText("3/4").closest("button")!.getAttribute("aria-pressed")).toBe("false");
   });
 
+  describe("the third phrase, for a compound meter, becomes the grouping", () => {
+    /**
+     * A compound meter has no "Subdivision" of its own — the eighth-note
+     * rate IS beatGroups, same reasoning as the main metronome page hiding
+     * the control entirely. What it has instead is which beat the eighth
+     * notes fall into: 7/8 as 3+2+2 and as 2+2+3 are the same meter and a
+     * different bar.
+     */
+    it("still offers ordinary subdivision for a non-compound meter", async () => {
+      draw({ subdivision: 4 });
+      await userEvent.click(phrase(/sixteenth/i));
+      const dialog = screen.getByRole("dialog");
+      expect(dialog.getAttribute("aria-label")).toBe("Subdivision");
+      expect(within(dialog).getByText("Sixteenth")).toBeTruthy();
+    });
+
+    it("offers every grouping for a compound meter that has alternatives", async () => {
+      const { onChange } = draw({ beatGroups: [3, 2, 2], compoundMeter: true });
+      await userEvent.click(phrase("3 + 2 + 2"));
+      const dialog = screen.getByRole("dialog");
+      expect(dialog.getAttribute("aria-label")).toBe("grouping");
+      await userEvent.click(within(dialog).getByText("2 + 3 + 2"));
+      expect(onChange).toHaveBeenCalledWith({ beatGroups: [2, 3, 2] });
+    });
+
+    it("marks the current grouping active among the alternatives", async () => {
+      draw({ beatGroups: [2, 2, 3], compoundMeter: true });
+      await userEvent.click(phrase("2 + 2 + 3"));
+      const dialog = screen.getByRole("dialog");
+      expect(within(dialog).getByText("2 + 2 + 3").closest("button")!.getAttribute("aria-pressed")).toBe(
+        "true",
+      );
+      expect(within(dialog).getByText("3 + 2 + 2").closest("button")!.getAttribute("aria-pressed")).toBe(
+        "false",
+      );
+    });
+
+    it("shows a lone grouping as plain text, not a button, when there is nothing to pick", () => {
+      // 6/8 is only ever 3+3 — there is nothing to press.
+      const { container } = draw({ beatGroups: [3, 3], compoundMeter: true });
+      const value = screen.getByText("3 + 3");
+      expect(value.closest("button")).toBeNull();
+      expect(container.querySelector(".drill-plan-token--static")).not.toBeNull();
+    });
+  });
+
   it("lets you set the beat count without dropping out of FREE", async () => {
     // The beats field forced `freeMode: false`, so choosing how many beats
     // silently took FREE away — the two belong together.

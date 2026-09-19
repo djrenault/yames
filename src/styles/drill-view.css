@@ -1119,6 +1119,15 @@
   border-bottom-color: var(--text-tertiary);
 }
 
+/* A phrase with nothing behind it to open — 9/8 is only ever 3+3+3, so the
+   dotted underline (the affordance for "this is editable") would be a lie.
+   Same layout as the token it sits beside, so the sentence still lines up. */
+.drill-plan-token--static {
+  border-bottom-color: transparent;
+  color: var(--text-secondary);
+  cursor: default;
+}
+
 .drill-plan-token.open {
   background: var(--accent-subtle);
   border-bottom-color: var(--accent);
