@@ -134,6 +134,43 @@ describe("the setlist, playing", () => {
     expect(stopped.querySelectorAll(".setlist-player-dot[data-live]")).toHaveLength(0);
   });
 
+  /**
+   * The player had its own copy of the beat-grouping logic, unaware of
+   * `compoundMeter` — a real 6/8 step (`beatGroups: [3, 3]`, compound) drew
+   * six flat dots and only ever lit the first two, since the engine's live
+   * beat position in compound mode counts the 2 real beats, not the 6
+   * eighth notes. `GroupEditor` and `FullscreenView` already draw this
+   * correctly; this locks the player's copy of it in too.
+   */
+  describe("compound meter dots", () => {
+    const sixEight = step({ id: "s4", name: "Waltz-ish", beatGroups: [3, 3], compoundMeter: true });
+
+    it("draws one big dot per real beat, not one per eighth note", () => {
+      const { container } = draw({ step: sixEight, activeBeat: 0, isDownbeat: true });
+      expect(container.querySelectorAll(".setlist-player-group")).toHaveLength(2);
+      expect(container.querySelectorAll(".setlist-player-dot")).toHaveLength(2);
+    });
+
+    it("draws the eighth-note sub-dots under each real beat", () => {
+      const { container } = draw({ step: sixEight, activeBeat: 0, isDownbeat: true });
+      // 3 eighth notes per beat = 2 sub-dots left over after the big one.
+      expect(container.querySelectorAll(".setlist-player-subdot")).toHaveLength(4);
+    });
+
+    it("lights the second real beat's dot, not a sixth flat one", () => {
+      const { container } = draw({ step: sixEight, activeBeat: 1, isDownbeat: true });
+      const groups = container.querySelectorAll(".setlist-player-group");
+      expect(groups[1].querySelector(".setlist-player-dot[data-live]")).not.toBeNull();
+      expect(container.querySelectorAll(".setlist-player-dot[data-live]")).toHaveLength(1);
+    });
+
+    it("lights the sub-dot for the eighth note within the real beat", () => {
+      const { container } = draw({ step: sixEight, activeBeat: 0, isDownbeat: false, activeSub: 1 });
+      expect(container.querySelectorAll(".setlist-player-subdot[data-live]")).toHaveLength(1);
+      expect(container.querySelectorAll(".setlist-player-dot[data-live]")).toHaveLength(0);
+    });
+  });
+
   it("the big slot carries the count-in while one is running", () => {
     // During a count-in the only number that matters is how many are left;
     // the tempo is what the beats themselves are telling you.

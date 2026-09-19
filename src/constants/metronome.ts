@@ -72,7 +72,10 @@ export const INSTRUMENTS: Array<{ id: string; soon?: boolean }> = [
 ];
 
 export const METER_VARIANTS: Record<string, number[][]> = {
-  "5/4":  [[3, 2], [2, 3]],
+  // `[5]` is the fourth option, not a third alternative to the first two:
+  // undivided, one accent for the whole bar — the "3+2"/"2+3" internal
+  // accent is exactly what it opts out of.
+  "5/4":  [[3, 2], [2, 3], [5]],
   "7/8":  [[3, 2, 2], [2, 2, 3], [2, 3, 2]],
   "8/8":  [[3, 2, 3], [3, 3, 2], [2, 3, 3]],
 };
@@ -90,17 +93,28 @@ export const METER_VARIANTS: Record<string, number[][]> = {
  *
  * Nothing may depend on the index of an entry: `cycleMeterPreset` looks
  * 4/4 up by label precisely so this list can be reordered again.
+ *
+ * `compound` marks the six "/8" meters: additive groupings of eighth
+ * notes where each `groups` entry is one real beat's own eighth-note
+ * count (2 or 3), not one of several equal-length beats sharing a group
+ * — 6/8's "3+3" is 2 beats, 7/8's "3+2+2" is 3, never 6 or 7. The "/4"
+ * meters keep the ordinary reading: each entry IS a count of separate,
+ * equal-length beats. See `AppState.compoundMeter` / `compound_active`
+ * in engine.rs. 3/8 is the degenerate case: one beat, so `groups` never
+ * gets a second entry and there is nothing to accent past the downbeat
+ * — musically, it's half a 6/8 bar.
  */
-export const METER_PRESETS: Array<{ label: string; groups: number[] }> = [
+export const METER_PRESETS: Array<{ label: string; groups: number[]; compound?: boolean }> = [
   { label: "2/4",  groups: [2] },
+  { label: "3/8",  groups: [3], compound: true },
   { label: "3/4",  groups: [3] },
   { label: "4/4",  groups: [4] },
   { label: "5/4",  groups: [3, 2] },
-  { label: "6/8",  groups: [3, 3] },
-  { label: "7/8",  groups: [3, 2, 2] },
-  { label: "8/8",  groups: [3, 2, 3] },
-  { label: "9/8",  groups: [3, 3, 3] },
-  { label: "12/8", groups: [3, 3, 3, 3] },
+  { label: "6/8",  groups: [3, 3], compound: true },
+  { label: "7/8",  groups: [3, 2, 2], compound: true },
+  { label: "8/8",  groups: [3, 2, 3], compound: true },
+  { label: "9/8",  groups: [3, 3, 3], compound: true },
+  { label: "12/8", groups: [3, 3, 3, 3], compound: true },
 ];
 
 export const TEMPO_MARKINGS: [number, string][] = [
@@ -266,4 +280,44 @@ export function removeBeatFromLastGroup(groups: number[]): number[] {
     return next;
   }
   return groups;
+}
+
+/**
+ * Custom accent pattern — one entry per pulse, level 0-3
+ * (Off/Weak/Medium/Strong). Mirrors `MAX_CUSTOM_PULSES` /
+ * `validate_custom_pattern` in `src-tauri/src/commands.rs`.
+ */
+export const MIN_CUSTOM_PULSES = 1;
+export const MAX_CUSTOM_PULSES = 32;
+
+/**
+ * What a fresh custom pattern starts as: an accent on the first pulse,
+ * Weak everywhere else — a reasonable default for "I don't know yet",
+ * and the shape most meters actually want on beat 1.
+ */
+export function defaultCustomPattern(pulses: number): number[] {
+  const n = Math.max(MIN_CUSTOM_PULSES, Math.min(MAX_CUSTOM_PULSES, pulses));
+  return Array.from({ length: n }, (_, i) => (i === 0 ? 3 : 1));
+}
+
+/** Off → Weak → Medium → Strong → Off. */
+export function cycleAccentLevel(level: number): number {
+  return (level + 1) % 4;
+}
+
+/** `pattern` with pulse `index` advanced one accent level. */
+export function withPulseCycled(pattern: number[], index: number): number[] {
+  return pattern.map((level, i) => (i === index ? cycleAccentLevel(level) : level));
+}
+
+/** One more pulse, appended as Weak. No-op at `MAX_CUSTOM_PULSES`. */
+export function addCustomPulse(pattern: number[]): number[] {
+  if (pattern.length >= MAX_CUSTOM_PULSES) return pattern;
+  return [...pattern, 1];
+}
+
+/** One fewer pulse, from the end. No-op at `MIN_CUSTOM_PULSES`. */
+export function removeCustomPulse(pattern: number[]): number[] {
+  if (pattern.length <= MIN_CUSTOM_PULSES) return pattern;
+  return pattern.slice(0, -1);
 }

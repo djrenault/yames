@@ -15,6 +15,16 @@
     "addBeat": "增加一拍",
     "removeBeat": "減少一拍",
     "grouping": "分組",
+    "custom": "自訂",
+    "customCount": "自訂 · {{count}}",
+    "customPulse": "脈衝 {{n}} — {{level}}",
+    "subdivisionCustomHint": "設定自訂節奏中每個脈衝的播放速度",
+    "accentLevels": {
+      "off": "關閉",
+      "weak": "輕聲",
+      "medium": "普通",
+      "strong": "重音"
+    },
     "tempo": "速度",
     "tempoUp": "提高速度",
     "tempoDown": "降低速度",
@@ -24,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} 分鐘",
     "lastSessionScore": "得分 {{score}}",
     "accent": {
-      "label": "重音",
+      "label": "強重音",
       "groups": "分組起始",
       "all": "每一拍",
       "none": "無"

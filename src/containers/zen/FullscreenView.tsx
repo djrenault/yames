@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { AppState, BeatEvent, Subdivision } from "../../types";
 import { setBpm, togglePlayback, setSubdivision, setBeatGroups, stopSpeedRamp, startSpeedRamp, startSpeedRampFrom, configureSpeedRamp, storeSave, storeLoad } from "../../ipc";
-import { meterLabel, meterTotal, stepMeter } from "../../utils/meter";
+import { compoundAccentPositions, meterLabel, meterTotal, stepMeter } from "../../utils/meter";
 import { ZenEffects, type ZenStyle } from "./ZenEffects";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { HintCard } from "../onboarding/hints/HintCard";
@@ -52,6 +52,13 @@ export function FullscreenView({ state, currentBeat, activeTab, onExit }: Fullsc
   // Accent comes from the engine event — false in FREE mode, and aware
   // of the speed ramp's own bar.
   const isAccent = currentBeat?.isAccent ?? false;
+  const beatGroups = state.beatGroups ?? [state.timeSignature];
+  // Compound meter has no group starts to mark beyond the bar's own
+  // downbeat — mirrors `GroupEditor`'s compound branch, which this one
+  // must keep agreeing with: the same dots, drawn in a different screen.
+  const compoundAccents = state.compoundMeter
+    ? compoundAccentPositions(beatGroups.length, state.accentMode)
+    : null;
 
   const exitFullscreen = () => onExit();
   const isWarmingUp = activeTab === "drill" && ramp.active && ramp.warmupCount < ramp.warmupBeats;
@@ -221,11 +228,39 @@ export function FullscreenView({ state, currentBeat, activeTab, onExit }: Fullsc
                   </div>
                 );
               })
-            // Metronome mode: render per group cluster
-            : (state.beatGroups ?? [state.timeSignature]).map((count, groupIdx) => {
-                const groupStart = meterTotal(
-                  (state.beatGroups ?? [state.timeSignature]).slice(0, groupIdx),
-                );
+            // Compound meter: one big dot per REAL beat (not per eighth
+            // note) — 6/8 is 2 dots, never 6 — each with its own
+            // (beatGroups[i] - 1) small dots underneath for that beat's
+            // remaining eighth notes. No group clusters: a compound
+            // meter's beats aren't grouped into anything further. Mirrors
+            // `GroupEditor`'s compound branch (the same screen this one
+            // used to just re-derive and get wrong).
+            : state.compoundMeter
+              ? beatGroups.map((pulses, beatIdx) => {
+                  const isBeatActive = !isWarmingUp && activeBeat === beatIdx && isDownbeat;
+                  const isSubBeatActive = !isWarmingUp && activeBeat === beatIdx && !isDownbeat;
+                  const isStaticAccent = compoundAccents?.has(beatIdx) ?? false;
+                  return (
+                    <div key={beatIdx} className="fs-group-cluster">
+                      <div className="fs-beat-group">
+                        <div className={`fs-beat ${isStaticAccent ? "accent-marker" : ""} ${isBeatActive ? "active" : ""} ${isBeatActive && isAccent ? "accent" : ""}`} />
+                        {pulses > 1 && (
+                          <div className="fs-sub-dots">
+                            {Array.from({ length: pulses - 1 }, (_, subIdx) => (
+                              <span
+                                key={subIdx}
+                                className={`fs-sub-dot ${isSubBeatActive && activeSub === subIdx + 1 ? "active" : ""}`}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              // Metronome mode: render per group cluster
+              : beatGroups.map((count, groupIdx) => {
+                const groupStart = meterTotal(beatGroups.slice(0, groupIdx));
                 return (
                   <div key={groupIdx} className="fs-group-cluster">
                     {Array.from({ length: count }, (_, d) => {
@@ -392,7 +427,7 @@ export function FullscreenView({ state, currentBeat, activeTab, onExit }: Fullsc
           }}>
             {state.freeMode
               ? t("metronome.freeBeatCount", { count: meterBeats })
-              : meterLabel(state.beatGroups ?? [state.timeSignature])}
+              : meterLabel(state.beatGroups ?? [state.timeSignature], state.compoundMeter)}
           </button>
         )}
         {activeTab !== "drill" && (

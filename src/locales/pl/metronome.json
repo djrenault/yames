@@ -15,6 +15,16 @@
     "addBeat": "Dodaj uderzenie",
     "removeBeat": "Usuń uderzenie",
     "grouping": "grupowanie",
+    "custom": "Niestandardowy",
+    "customCount": "Niestandardowy · {{count}}",
+    "customPulse": "Puls {{n}} — {{level}}",
+    "subdivisionCustomHint": "Określa, jak szybko odtwarzany jest każdy puls we wzorze niestandardowym",
+    "accentLevels": {
+      "off": "Wyłączony",
+      "weak": "Cicho",
+      "medium": "Normalny",
+      "strong": "Akcent"
+    },
     "tempo": "Tempo",
     "tempoUp": "Zwiększ tempo",
     "tempoDown": "Zmniejsz tempo",
@@ -24,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} min",
     "lastSessionScore": "ocena {{score}}",
     "accent": {
-      "label": "Akcent",
+      "label": "Mocny akcent",
       "groups": "Początki grup",
       "all": "Każda miara",
       "none": "Brak"

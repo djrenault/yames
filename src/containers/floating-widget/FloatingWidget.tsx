@@ -317,7 +317,7 @@ export function FloatingWidget() {
 
   const timeSigLabel = state.freeMode
     ? t("metronome.freeBeatCount", { count: beatsPerMeasure })
-    : meterLabel(state.beatGroups ?? [state.timeSignature]);
+    : meterLabel(state.beatGroups ?? [state.timeSignature], state.compoundMeter);
   const rampActive = state.speedRamp.active;
 
   return (

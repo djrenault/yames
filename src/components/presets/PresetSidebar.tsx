@@ -52,6 +52,8 @@ function stateToPreset(
     timeSignature: state.timeSignature,
     beatGroups: state.beatGroups,
     freeMode: state.freeMode,
+    compoundMeter: state.compoundMeter,
+    customPattern: state.customPattern.length > 0 ? [...state.customPattern] : undefined,
     soundType: state.soundType,
     volume: state.volume,
     view,
@@ -80,6 +82,8 @@ function isDirty(state: AppState, preset: Preset, view: string): boolean {
   if (state.soundType !== preset.soundType) return true;
   if (Math.abs(state.volume - preset.volume) > 0.01) return true;
   if ((state.freeMode ?? false) !== (preset.freeMode ?? false)) return true;
+  if ((state.compoundMeter ?? false) !== (preset.compoundMeter ?? false)) return true;
+  if (JSON.stringify(state.customPattern ?? []) !== JSON.stringify(preset.customPattern ?? [])) return true;
   if (view === "drill" && preset.speedRamp && state.speedRamp) {
     const r = state.speedRamp;
     const p = preset.speedRamp;
@@ -117,7 +121,7 @@ function presetSummary(preset: Preset, t: (key: string) => string): string {
   }
   const meter = presetFreeMode(preset)
     ? t("metronome.free")
-    : meterLabel(presetBeatGroups(preset));
+    : meterLabel(presetBeatGroups(preset), preset.compoundMeter ?? false);
   return `${preset.bpm} · ${meter}`;
 }
 

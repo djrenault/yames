@@ -34,7 +34,7 @@ function invokedCommands(): string[] {
  * are behind one click now. Every assertion below is about what happens when
  * one is chosen, which is unchanged — only the reaching for it moved.
  */
-function openPicker(props: { beatGroups: number[]; freeMode: boolean }) {
+function openPicker(props: { beatGroups: number[]; freeMode: boolean; compoundMeter?: boolean }) {
   const view = render(<MeterPresets {...props} />);
   fireEvent.click(view.container.querySelector(".meter-chip") as HTMLButtonElement);
   return view;
@@ -92,7 +92,9 @@ describe("MeterPresets — FREE chip", () => {
   it("switches grouping in one click, without opening the picker", () => {
     // 2+2+3 and 3+2+2 are the same meter and a different bar. Reaching one
     // from the other used to cost three clicks through the picker.
-    const { container } = render(<MeterPresets beatGroups={[3, 2, 2]} freeMode={false} />);
+    const { container } = render(
+      <MeterPresets beatGroups={[3, 2, 2]} freeMode={false} compoundMeter />,
+    );
     const chips = [...container.querySelectorAll(".meter-grouping-chip")] as HTMLButtonElement[];
     fireEvent.click(chips[1]);
     expect(mockInvoke).toHaveBeenCalledWith("set_beat_groups", { groups: [2, 2, 3] });
@@ -103,7 +105,9 @@ describe("MeterPresets — FREE chip", () => {
     // 9/8 is only ever 3+3+3. It reads as the same kind of thing as a meter
     // that has alternatives — one active badge — but there is nothing to
     // press, so it is not a button.
-    const { container } = render(<MeterPresets beatGroups={[3, 3, 3]} freeMode={false} />);
+    const { container } = render(
+      <MeterPresets beatGroups={[3, 3, 3]} freeMode={false} compoundMeter />,
+    );
     const chips = [...container.querySelectorAll(".meter-grouping-chip")];
     expect(chips).toHaveLength(1);
     expect(chips[0].tagName).toBe("SPAN");
@@ -112,7 +116,9 @@ describe("MeterPresets — FREE chip", () => {
   });
 
   it("shows every alternative as a button, with one active", () => {
-    const { container } = render(<MeterPresets beatGroups={[3, 2, 2]} freeMode={false} />);
+    const { container } = render(
+      <MeterPresets beatGroups={[3, 2, 2]} freeMode={false} compoundMeter />,
+    );
     const chips = [...container.querySelectorAll(".meter-grouping-chip")];
     expect(chips).toHaveLength(3);
     expect(chips.every((c) => c.tagName === "BUTTON")).toBe(true);
@@ -120,7 +126,9 @@ describe("MeterPresets — FREE chip", () => {
   });
 
   it("says on the chip what the meter is, without opening anything", () => {
-    const { container, unmount } = render(<MeterPresets beatGroups={[3, 2, 2]} freeMode={false} />);
+    const { container, unmount } = render(
+      <MeterPresets beatGroups={[3, 2, 2]} freeMode={false} compoundMeter />,
+    );
     expect(container.querySelector(".meter-chip")?.textContent).toContain("7/8");
     // The grouping is the part that changes without the meter changing, so
     // where a meter has alternatives they sit on the row as buttons — one

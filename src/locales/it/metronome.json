@@ -15,6 +15,16 @@
     "addBeat": "Aggiungi colpo",
     "removeBeat": "Rimuovi colpo",
     "grouping": "raggruppamento",
+    "custom": "Personalizzato",
+    "customCount": "Personalizzato · {{count}}",
+    "customPulse": "Impulso {{n}} — {{level}}",
+    "subdivisionCustomHint": "Imposta la velocità di ogni impulso nel tuo pattern personalizzato",
+    "accentLevels": {
+      "off": "Disattivato",
+      "weak": "Leggero",
+      "medium": "Normale",
+      "strong": "Accento"
+    },
     "tempo": "Tempo",
     "tempoUp": "Aumenta il tempo",
     "tempoDown": "Riduci il tempo",
@@ -24,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} min",
     "lastSessionScore": "punteggio {{score}}",
     "accent": {
-      "label": "Accento",
+      "label": "Accento forte",
       "groups": "Inizio gruppo",
       "all": "Ogni movimento",
       "none": "Nessuno"

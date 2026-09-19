@@ -21,6 +21,8 @@ import {
   setSubdivision,
   setTheme,
   setBeatGroups,
+  setCompoundMeter,
+  setCustomPattern,
   setFreeMode,
   setVolume,
   showFloating,
@@ -716,6 +718,13 @@ export function MainWindow() {
     const steps: Array<[string, () => Promise<unknown>]> = [
       ["bpm", () => setBpm(preset.bpm)],
       ["subdivision", () => setSubdivision(preset.subdivision as Subdivision)],
+      // Custom pattern takes over from beatGroups whenever it's non-empty
+      // (see GroupEditor), so it is set unconditionally — leaving a custom
+      // preset for a stock one must clear it, exactly as MeterPresets does
+      // when leaving Custom. Compound goes before beatGroups: the
+      // interpretation before the array it applies to.
+      ["customPattern", () => setCustomPattern(preset.customPattern ?? [])],
+      ["compoundMeter", () => setCompoundMeter(preset.compoundMeter ?? false)],
       ["beatGroups", () => setBeatGroups(presetBeatGroups(preset))],
       ["freeMode", () => setFreeMode(presetFreeMode(preset))],
       ["soundType", () => setSoundType(preset.soundType)],
@@ -1099,6 +1108,12 @@ export function MainWindow() {
             if (!id) return;
             setSidebarOpen(true);
             setTimeout(() => sidebarRef.current?.triggerRenameSetlist(id), 150);
+          }}
+          addToSetlist={{
+            setlists: setlistSession.setlists,
+            feedback: setlistSession.addFeedback,
+            onAdd: (setlistId) => void setlistSession.addToSetlist(setlistId),
+            onAddNew: (name) => void setlistSession.addToNewSetlist(name),
           }}
           listening={evaluation.enabled}
           soundOpen={soundOpen}

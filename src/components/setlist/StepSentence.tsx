@@ -7,8 +7,8 @@ import {
   DrillNumberField,
 } from "../../containers/drill/DrillConfigPopover";
 import { SubdivisionIcon } from "../MetronomeIcons";
-import { METER_PRESETS, SOUND_TYPES } from "../../constants/metronome";
-import { meterLabel, meterTotal } from "../../utils/meter";
+import { METER_PRESETS, METER_VARIANTS, SOUND_TYPES } from "../../constants/metronome";
+import { findMeterPreset, meterLabel, meterTotal } from "../../utils/meter";
 import { triggerLabel, transitionLabel } from "./format";
 import { TransitionEditor } from "./TransitionEditor";
 import type { SetlistStep, SetlistTransition, SetlistTrigger, Subdivision } from "../../types";
@@ -96,8 +96,26 @@ export function StepSentence({
   const toggle = (key: Exclude<Field, null>) => () =>
     setOpen((current) => (current === key ? null : key));
 
-  const meter = step.freeMode ? t("metronome.free") : meterLabel(step.beatGroups);
+  const meter = step.freeMode
+    ? t("metronome.free")
+    : meterLabel(step.beatGroups, step.compoundMeter ?? false);
   const beats = meterTotal(step.beatGroups);
+
+  /**
+   * A compound meter has no "Subdivision" of its own — the eighth-note rate
+   * IS beatGroups, same reasoning as the main metronome page hiding the
+   * control entirely. What a compound meter DOES have, that an ordinary one
+   * spends this slot on subdivision instead of, is which beat the bar's
+   * eighth notes fall into: 7/8 as 3+2+2 and as 2+2+3 are the same meter and
+   * a different bar. So the third phrase becomes the grouping picker here,
+   * mirroring the metronome page's own meter-groupings row.
+   */
+  const isCompound = step.compoundMeter ?? false;
+  const groupingVariants = isCompound
+    ? METER_VARIANTS[findMeterPreset(step.beatGroups, true)?.label ?? ""]
+    : undefined;
+  const hasGroupingChoice = !!groupingVariants && groupingVariants.length > 1;
+  const groupingLabel = step.beatGroups.join(" + ");
 
   /** The window's quiet footer: what one pass of this step comes to. */
   const note = t("setlist.said.stepNote", { number, total });
@@ -155,16 +173,24 @@ export function StepSentence({
 
         <span className="drill-plan-sep" aria-hidden="true" />
 
-        <button
-          type="button"
-          ref={anchor("sub")}
-          className={`drill-plan-token${open === "sub" ? " open" : ""}`}
-          aria-expanded={open === "sub"}
-          aria-label={t("metronome.subdivision")}
-          onClick={toggle("sub")}
-        >
-          <span className="drill-plan-value">{t(`subdiv.${step.subdivision}`).toLowerCase()}</span>
-        </button>
+        {isCompound && !hasGroupingChoice ? (
+          <span className="drill-plan-token drill-plan-token--static" aria-label={t("metronome.grouping")}>
+            <span className="drill-plan-value">{groupingLabel}</span>
+          </span>
+        ) : (
+          <button
+            type="button"
+            ref={anchor("sub")}
+            className={`drill-plan-token${open === "sub" ? " open" : ""}`}
+            aria-expanded={open === "sub"}
+            aria-label={isCompound ? t("metronome.grouping") : t("metronome.subdivision")}
+            onClick={toggle("sub")}
+          >
+            <span className="drill-plan-value">
+              {isCompound ? groupingLabel : t(`subdiv.${step.subdivision}`).toLowerCase()}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* The line the cards never had room for, and the one a setlist is
@@ -304,22 +330,32 @@ export function StepSentence({
             <button
               className={`drill-choice ${step.freeMode ? "active" : ""}`}
               aria-pressed={!!step.freeMode}
-              onClick={() => onChange({ freeMode: true })}
+              onClick={() => onChange({ freeMode: true, compoundMeter: false, customPattern: [] })}
             >
               <span className="drill-choice-label">{t("metronome.free")}</span>
             </button>
-            {METER_PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                className={`drill-choice ${
-                  !step.freeMode && meterLabel(step.beatGroups) === preset.label ? "active" : ""
-                }`}
-                aria-pressed={!step.freeMode && meterLabel(step.beatGroups) === preset.label}
-                onClick={() => onChange({ beatGroups: [...preset.groups], freeMode: false })}
-              >
-                <span className="drill-choice-label">{preset.label}</span>
-              </button>
-            ))}
+            {METER_PRESETS.map((preset) => {
+              const active =
+                !step.freeMode &&
+                meterLabel(step.beatGroups, step.compoundMeter ?? false) === preset.label;
+              return (
+                <button
+                  key={preset.label}
+                  className={`drill-choice ${active ? "active" : ""}`}
+                  aria-pressed={active}
+                  onClick={() =>
+                    onChange({
+                      beatGroups: [...preset.groups],
+                      freeMode: false,
+                      compoundMeter: preset.compound ?? false,
+                      customPattern: [],
+                    })
+                  }
+                >
+                  <span className="drill-choice-label">{preset.label}</span>
+                </button>
+              );
+            })}
           </DrillPopoverChoices>
           {/* Any bar length, for the meters the nine presets do not name. A
               number set here is ONE group, so the accent falls on beat one and
@@ -338,7 +374,34 @@ export function StepSentence({
         </DrillConfigPopover>
       )}
 
-      {open === "sub" && (
+      {open === "sub" && isCompound && (
+        <DrillConfigPopover
+          anchor={anchors.current.sub ?? null}
+          onClose={close}
+          clears=".setlist-sentence"
+          label={t("metronome.grouping")}
+          note={note}
+        >
+          <DrillPopoverChoices label={t("metronome.grouping")}>
+            {(groupingVariants ?? []).map((v) => {
+              const key = v.join(",");
+              const active = key === step.beatGroups.join(",");
+              return (
+                <button
+                  key={key}
+                  className={`drill-choice ${active ? "active" : ""}`}
+                  aria-pressed={active}
+                  onClick={() => onChange({ beatGroups: [...v] })}
+                >
+                  <span className="drill-choice-label">{v.join(" + ")}</span>
+                </button>
+              );
+            })}
+          </DrillPopoverChoices>
+        </DrillConfigPopover>
+      )}
+
+      {open === "sub" && !isCompound && (
         <DrillConfigPopover
           anchor={anchors.current.sub ?? null}
           onClose={close}

@@ -257,7 +257,8 @@ button.context-chip:hover,
   transform: translateY(0);
 }
 
-.header-sound-wrap {
+.header-sound-wrap,
+.header-add-setlist-wrap {
   position: relative;
 }
 
@@ -281,6 +282,68 @@ button.context-chip:hover,
 
 .header-more-menu {
   min-width: 150px;
+}
+
+/* "Add to setlist" (U9.8). Same popover treatment as the sound/more menus —
+   one more picker hanging off a context chip, not a new kind of thing. */
+.header-add-setlist-menu {
+  min-width: 220px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.add-setlist-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.add-setlist-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-setlist-count {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.add-setlist-empty {
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+}
+
+.add-setlist-divider {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border);
+}
+
+.add-setlist-new-btn {
+  color: var(--accent);
+}
+
+.add-setlist-new-form {
+  padding: 2px;
+}
+
+.add-setlist-new-input {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.add-setlist-new-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* The two volumes sit side by side in the chip row. The chip that used to be

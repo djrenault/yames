@@ -58,11 +58,28 @@ export type AppState = {
   beatGroups: number[];
   freeMode: boolean;
   /**
+   * True for an additive, eighth-note-based meter (6/8, 7/8, 8/8, 9/8,
+   * 12/8): `beatGroups` then holds one entry per real beat, each the
+   * beat's own eighth-note count (2 or 3) — 7/8 as "2+2+3" is 3 beats,
+   * not seven. False (the default) is the ordinary reading: one entry
+   * per group of equal-length beats. See `compound_active` in engine.rs.
+   */
+  compoundMeter: boolean;
+  /**
    * Which beats the click accents: where each group opens (the default), every
    * beat, or none. "none" is what FREE mode does to accents, without giving up
    * the grouping the dots draw.
    */
   accentMode: "groups" | "all" | "none";
+  /**
+   * Per-pulse accent levels (0=Off, 1=Weak, 2=Medium, 3=Strong), one
+   * entry per audible click in the bar. Non-empty replaces `beatGroups`
+   * + `subdivision` + `accentMode` entirely for this bar — see
+   * `AccentLevel` and the custom-pattern branch in engine.rs. Empty (the
+   * default) means "no custom pattern": everything behaves exactly as
+   * it always has.
+   */
+  customPattern: number[];
   speedRamp: SpeedRamp;
   /**
    * The live count-in, which belongs to the engine rather than to the drill
@@ -86,7 +103,12 @@ export type BeatEvent = {
    * engine is the only thing that knows which rule applied.
    */
   isAccent: boolean;
+  /** 0=Off, 1=Weak, 2=Medium, 3=Strong — see `AppState.customPattern`. */
+  accentLevel: number;
 };
+
+/** 0=Off, 1=Weak, 2=Medium, 3=Strong — one custom-pattern pulse. */
+export type AccentLevel = 0 | 1 | 2 | 3;
 
 // ---------------------------------------------------------------------------
 // MIDI types
@@ -127,6 +149,10 @@ export type Preset = {
   timeSignature: number;
   beatGroups?: number[];
   freeMode?: boolean;
+  /** True for a 6/8-style additive meter. See AppState.compoundMeter. */
+  compoundMeter?: boolean;
+  /** Non-empty when a custom per-pulse accent pattern is active. See AppState.customPattern. */
+  customPattern?: number[];
   soundType: string;
   volume: number;
   view: "beat" | "drill";
@@ -168,6 +194,10 @@ export type SetlistStep = {
   subdivision: number;
   beatGroups: number[];
   freeMode?: boolean;
+  /** True for a 6/8-style additive meter. See AppState.compoundMeter. */
+  compoundMeter?: boolean;
+  /** Non-empty when a custom per-pulse accent pattern is active. See AppState.customPattern. */
+  customPattern?: number[];
   soundType: string;
   volume: number;
   /**
@@ -186,6 +216,12 @@ export type Setlist = {
   id: string;
   name: string;
   createdAt: number;
+  /**
+   * Stamped by `saveSetlist` on every write. Absent on a setlist saved
+   * before this existed — the setlist picker falls back to `createdAt`
+   * for those so "last modified" still has something to sort by.
+   */
+  updatedAt?: number;
   steps: SetlistStep[];
   /** 1 = once through. 0 = until stopped. (U9.6) */
   repeat: number;

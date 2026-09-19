@@ -15,6 +15,16 @@
     "addBeat": "Beat hinzufügen",
     "removeBeat": "Beat entfernen",
     "grouping": "Gruppierung",
+    "custom": "Benutzerdefiniert",
+    "customCount": "Benutzerdefiniert · {{count}}",
+    "customPulse": "Puls {{n}} — {{level}}",
+    "subdivisionCustomHint": "Legt fest, wie schnell jeder Puls in deinem eigenen Muster gespielt wird",
+    "accentLevels": {
+      "off": "Aus",
+      "weak": "Leise",
+      "medium": "Normal",
+      "strong": "Akzent"
+    },
     "tempo": "Tempo",
     "tempoUp": "Tempo erhöhen",
     "tempoDown": "Tempo verringern",
@@ -24,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} Min.",
     "lastSessionScore": "Score {{score}}",
     "accent": {
-      "label": "Betonung",
+      "label": "Starke Betonung",
       "groups": "Gruppenanfänge",
       "all": "Jeder Schlag",
       "none": "Keine"

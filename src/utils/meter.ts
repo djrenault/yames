@@ -77,36 +77,77 @@ export function accentPositions(
 }
 
 /**
+ * Bar-local BEAT positions (not eighth-note positions) that accent in a
+ * compound meter, i.e. `beatGroups`'s own indices — `[3, 2, 2]` (7/8 as
+ * "3+2+2") has 3 real beats, so positions live in `{0, 1, 2}`, never `{0,
+ * 3, 5}`. `accentPositions` answers the same question for the ordinary
+ * "N equal beats in a group" meaning; this is its compound sibling, and
+ * must keep mirroring the engine's `compound_active` branch the way
+ * `accentPositions` mirrors the ordinary one.
+ */
+export function compoundAccentPositions(
+  beatCount: number,
+  mode: "groups" | "all" | "none" = "groups",
+): Set<number> {
+  const positions = new Set<number>();
+  if (mode === "none") return positions;
+  if (mode === "all") {
+    for (let i = 0; i < beatCount; i++) positions.add(i);
+    return positions;
+  }
+  positions.add(0); // only the bar's own downbeat — no group starts to mark
+  return positions;
+}
+
+/**
  * Index into `METER_PRESETS` of the preset `groups` belongs to, or -1.
  *
  * Variant-aware: `[2, 3]` is a grouping of the 5/4 preset, so it reports
  * 5/4 rather than "no match". The cycle helpers rely on this — without
  * it, cycling from a variant always restarted at 4/4.
+ *
+ * `compound` disambiguates the one real collision in the table: 3/8 (one
+ * beat of 3 eighth notes) and 3/4 (one beat of 3 quarter notes) both
+ * store `groups: [3]` — the array alone can't tell them apart, only
+ * `AppState.compoundMeter` can. Every OTHER meter's `groups` shape is
+ * still unique regardless of compound-ness (6/8's `[3, 3]` matches
+ * nothing else), so a caller that hasn't been updated to pass `compound`
+ * (nothing outside the main meter picker has, until presets and setlist
+ * steps carry the flag too) still resolves those correctly — an exact
+ * `groups` + `compound` match is tried first, and only the 3/8-vs-3/4
+ * pair ever needs it to land on the right one.
  */
-export function findMeterPresetIndex(groups: number[] | undefined | null): number {
+export function findMeterPresetIndex(
+  groups: number[] | undefined | null,
+  compound = false,
+): number {
   const key = meterKey(groups);
   if (!key) return -1;
-  return METER_PRESETS.findIndex((preset) => {
+  const matches = (preset: (typeof METER_PRESETS)[number]) => {
     if (meterKey(preset.groups) === key) return true;
     return (METER_VARIANTS[preset.label] ?? []).some((v) => meterKey(v) === key);
-  });
+  };
+  const exact = METER_PRESETS.findIndex((p) => (p.compound ?? false) === compound && matches(p));
+  return exact !== -1 ? exact : METER_PRESETS.findIndex(matches);
 }
 
-/** The preset `groups` belongs to (variant-aware), or undefined. */
+/** The preset `groups` belongs to (variant-aware), or undefined. See `findMeterPresetIndex` on `compound`. */
 export function findMeterPreset(
   groups: number[] | undefined | null,
+  compound = false,
 ): (typeof METER_PRESETS)[number] | undefined {
-  const idx = findMeterPresetIndex(groups);
+  const idx = findMeterPresetIndex(groups, compound);
   return idx === -1 ? undefined : METER_PRESETS[idx];
 }
 
 /**
  * Label to show for `groups` — the preset label when it is one of ours
  * (variants included, so `[2, 3]` still reads "5/4"), otherwise the
- * `n/4` fallback for a hand-built grouping.
+ * `n/4` fallback for a hand-built grouping. See `findMeterPresetIndex`
+ * on `compound`.
  */
-export function meterLabel(groups: number[] | undefined | null): string {
-  return findMeterPreset(groups)?.label ?? `${meterTotal(groups)}/4`;
+export function meterLabel(groups: number[] | undefined | null, compound = false): string {
+  return findMeterPreset(groups, compound)?.label ?? `${meterTotal(groups)}/4`;
 }
 
 /**
@@ -114,14 +155,16 @@ export function meterLabel(groups: number[] | undefined | null): string {
  *
  * Cycling always lands on a preset's canonical grouping, never on a
  * variant: stepping forward from the 7/8 variant `[2, 3, 2]` goes to
- * 8/8, not back through the other 7/8 groupings.
+ * 8/8, not back through the other 7/8 groupings. See
+ * `findMeterPresetIndex` on `compound`.
  */
 export function cycleMeterPreset(
   groups: number[] | undefined | null,
   dir: 1 | -1,
+  compound = false,
 ): number[] {
   const n = METER_PRESETS.length;
-  const current = findMeterPresetIndex(groups);
+  const current = findMeterPresetIndex(groups, compound);
   // Unknown grouping: land on 4/4 rather than jumping somewhere
   // arbitrary. Looked up by LABEL, not by index: this used to read
   // `METER_PRESETS[0]`, which was 4/4 only by accident of the list

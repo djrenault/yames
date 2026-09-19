@@ -15,6 +15,16 @@
     "addBeat": "박 추가",
     "removeBeat": "박 제거",
     "grouping": "그룹",
+    "custom": "커스텀",
+    "customCount": "커스텀 · {{count}}",
+    "customPulse": "펄스 {{n}} — {{level}}",
+    "subdivisionCustomHint": "커스텀 패턴의 각 펄스 속도를 설정합니다",
+    "accentLevels": {
+      "off": "끄기",
+      "weak": "조용히",
+      "medium": "보통",
+      "strong": "강조"
+    },
     "tempo": "템포",
     "tempoUp": "템포 올리기",
     "tempoDown": "템포 내리기",
@@ -24,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}}분",
     "lastSessionScore": "점수 {{score}}",
     "accent": {
-      "label": "악센트",
+      "label": "강한 악센트",
       "groups": "그룹 시작",
       "all": "모든 박",
       "none": "없음"

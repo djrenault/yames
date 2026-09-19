@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { METER_PRESETS, METER_VARIANTS } from "../constants/metronome";
 import {
   accentPositions,
+  compoundAccentPositions,
   cycleMeterPreset,
   findMeterPreset,
   findMeterPresetIndex,
@@ -86,6 +87,34 @@ describe("accentPositions", () => {
     }
   });
 });
+describe("compoundAccentPositions", () => {
+  // Bar-local BEAT indices, not eighth-note positions — the whole point
+  // of the compound reading. 7/8 as "2+2+3" has 3 real beats.
+  it("marks only the bar's own downbeat under the default (groups)", () => {
+    expect([...compoundAccentPositions(3)]).toEqual([0]);
+    expect([...compoundAccentPositions(2)]).toEqual([0]);
+    expect([...compoundAccentPositions(4)]).toEqual([0]);
+  });
+
+  it("marks every beat under `all`", () => {
+    expect([...compoundAccentPositions(3, "all")].sort((a, b) => a - b)).toEqual([0, 1, 2]);
+  });
+
+  it("marks nothing under `none`", () => {
+    expect([...compoundAccentPositions(3, "none")]).toEqual([]);
+  });
+
+  it("never marks a position at or past beatCount", () => {
+    for (const beatCount of [1, 2, 3, 4]) {
+      for (const mode of ["groups", "all", "none"] as const) {
+        for (const p of compoundAccentPositions(beatCount, mode)) {
+          expect(p).toBeLessThan(beatCount);
+        }
+      }
+    }
+  });
+});
+
 describe("accentPositions and the accent mode", () => {
   // This mirrors `accent_for` in engine.rs. They must agree: this is what the
   // dots draw at rest, and the engine is what you hear. For as long as the
@@ -134,6 +163,12 @@ describe("findMeterPresetIndex", () => {
     expect(findMeterPresetIndex([])).toBe(-1);
     expect(findMeterPresetIndex(undefined)).toBe(-1);
   });
+
+  it("disambiguates 3/8 from 3/4 — same [3] groups, different compound flag", () => {
+    expect(findMeterPreset([3])?.label).toBe("3/4");
+    expect(findMeterPreset([3], false)?.label).toBe("3/4");
+    expect(findMeterPreset([3], true)?.label).toBe("3/8");
+  });
 });
 
 describe("meterLabel", () => {
@@ -145,6 +180,16 @@ describe("meterLabel", () => {
 
   it("falls back to n/4 for a hand-built grouping", () => {
     expect(meterLabel([5, 5])).toBe("10/4");
+  });
+
+  it("reads the undivided [5] as the 5/4 variant, not a 5-quarter-note bar of its own", () => {
+    expect(findMeterPreset([5])?.label).toBe("5/4");
+    expect(meterLabel([5])).toBe("5/4");
+  });
+
+  it("takes the compound flag when given, disambiguating 3/8 from 3/4", () => {
+    expect(meterLabel([3])).toBe("3/4");
+    expect(meterLabel([3], true)).toBe("3/8");
   });
 });
 

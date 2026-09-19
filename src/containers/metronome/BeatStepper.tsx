@@ -1,11 +1,15 @@
 import { useTranslation } from "react-i18next";
 import {
   addBeatToLastGroup,
+  addCustomPulse,
+  MAX_CUSTOM_PULSES,
   MAX_FREE_BEATS,
+  MIN_CUSTOM_PULSES,
   MIN_FREE_BEATS,
   nextFreeBeatCount,
   prevFreeBeatCount,
   removeBeatFromLastGroup,
+  removeCustomPulse,
 } from "../../constants/metronome";
 
 /** Clicks per beat, by subdivision. */
@@ -18,6 +22,11 @@ interface BeatStepperProps {
   subdivision: number;
   freeMode: boolean;
   onBeatGroupsChange?: (groups: number[]) => void;
+  /** True for a 6/8-style additive meter — see AppState.compoundMeter. */
+  compoundMeter?: boolean;
+  /** Non-empty when a custom accent pattern is active — see GroupEditor. */
+  customPattern?: number[];
+  onCustomPatternChange?: (next: number[]) => void;
 }
 
 /**
@@ -42,10 +51,18 @@ export function BeatStepper({
   subdivision,
   freeMode,
   onBeatGroupsChange,
+  compoundMeter = false,
+  customPattern = [],
+  onCustomPatternChange,
 }: BeatStepperProps) {
   const { t } = useTranslation();
-  const total = beatGroups.reduce((sum, n) => sum + n, 0);
-  const clicksPerBar = total * (SUBDIVISION_MULTIPLIER[subdivision] ?? 1);
+  const isCustom = customPattern.length > 0;
+  const total = isCustom ? customPattern.length : beatGroups.reduce((sum, n) => sum + n, 0);
+  // A compound meter's `total` already counts eighth notes (7/8's
+  // "3+2+2" sums to 7) — there is no separate Subdivision multiplier to
+  // apply on top, unlike a simple meter's beat count.
+  const clicksPerBar =
+    isCustom || compoundMeter ? total : total * (SUBDIVISION_MULTIPLIER[subdivision] ?? 1);
 
   return (
     <div className="beat-stepper-row">
@@ -56,12 +73,15 @@ export function BeatStepper({
       >
         <button
           className="beat-stepper-btn"
-          onClick={() =>
-            onBeatGroupsChange?.(
-              freeMode ? [prevFreeBeatCount(total)] : removeBeatFromLastGroup(beatGroups),
-            )
-          }
-          disabled={!freeMode && total <= MIN_FREE_BEATS}
+          onClick={() => {
+            if (isCustom) onCustomPatternChange?.(removeCustomPulse(customPattern));
+            else {
+              onBeatGroupsChange?.(
+                freeMode ? [prevFreeBeatCount(total)] : removeBeatFromLastGroup(beatGroups),
+              );
+            }
+          }}
+          disabled={isCustom ? total <= MIN_CUSTOM_PULSES : !freeMode && total <= MIN_FREE_BEATS}
           aria-label={t("metronome.removeBeat")}
         >
           −
@@ -69,12 +89,15 @@ export function BeatStepper({
         <span className="beat-stepper-value">{total}</span>
         <button
           className="beat-stepper-btn"
-          onClick={() =>
-            onBeatGroupsChange?.(
-              freeMode ? [nextFreeBeatCount(total)] : addBeatToLastGroup(beatGroups),
-            )
-          }
-          disabled={!freeMode && total >= MAX_FREE_BEATS}
+          onClick={() => {
+            if (isCustom) onCustomPatternChange?.(addCustomPulse(customPattern));
+            else {
+              onBeatGroupsChange?.(
+                freeMode ? [nextFreeBeatCount(total)] : addBeatToLastGroup(beatGroups),
+              );
+            }
+          }}
+          disabled={isCustom ? total >= MAX_CUSTOM_PULSES : !freeMode && total >= MAX_FREE_BEATS}
           aria-label={t("metronome.addBeat")}
         >
           +

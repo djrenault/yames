@@ -1,4 +1,13 @@
-import { setBeatGroups, setBpm, setFreeMode, setSoundType, setSubdivision, setVolume } from "../../../ipc";
+import {
+  setBeatGroups,
+  setBpm,
+  setCompoundMeter,
+  setCustomPattern,
+  setFreeMode,
+  setSoundType,
+  setSubdivision,
+  setVolume,
+} from "../../../ipc";
 import type { SetlistStep, Subdivision } from "../../../types";
 
 /**
@@ -14,6 +23,13 @@ import type { SetlistStep, Subdivision } from "../../../types";
  * triggers is a no-op there. Selecting a step while stopped has no bar to
  * cut in half either.
  *
+ * `customPattern` is applied unconditionally, empty or not: it takes over
+ * from `beatGroups` whenever it's non-empty (see `GroupEditor`), so leaving
+ * a custom step behind must clear it, exactly as `MeterPresets.handleSelect`
+ * clears it when leaving Custom for a stock preset. `compoundMeter` goes
+ * before `beatGroups` for the same reason `MeterPresets` orders them that
+ * way: the interpretation before the array it applies to.
+ *
  * Each call is guarded on its own: one setter rejecting must not take the
  * rest of the step's configuration down with it, the same rule
  * `handleLoadPreset` follows.
@@ -21,6 +37,8 @@ import type { SetlistStep, Subdivision } from "../../../types";
 export function applySetlistStep(step: SetlistStep): void {
   void setBpm(step.bpm).catch(() => {});
   void setSubdivision(step.subdivision as Subdivision).catch(() => {});
+  void setCustomPattern(step.customPattern ?? []).catch(() => {});
+  void setCompoundMeter(step.compoundMeter ?? false).catch(() => {});
   if (step.beatGroups.length > 0) void setBeatGroups(step.beatGroups).catch(() => {});
   if (typeof step.freeMode === "boolean") void setFreeMode(step.freeMode).catch(() => {});
   void setSoundType(step.soundType).catch(() => {});

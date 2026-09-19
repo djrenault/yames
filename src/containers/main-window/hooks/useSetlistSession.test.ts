@@ -259,6 +259,46 @@ describe("useSetlistSession", () => {
     expect(result.current.setlist!.steps[0].bpm).toBe(143);
   });
 
+  it("the FIRST step of an empty setlist also takes the engine's compound meter", async () => {
+    // Same gap as the plain-preset bug: a step built from "now" used to drop
+    // compoundMeter, so adding a real-6/8 bar to an empty setlist silently
+    // turned it into an ordinary 6-beat meter.
+    const { result, rerender } = mount();
+    await act(async () => {
+      result.current.loadSetlist({ ...CHAIN, steps: [] });
+    });
+    rerender({ state: { ...DEFAULT_TEST_STATE, beatGroups: [3, 3], compoundMeter: true }, isPlaying: false });
+    await act(async () => {
+      result.current.addStepFromNow();
+    });
+    expect(result.current.setlist!.steps[0].compoundMeter).toBe(true);
+    expect(result.current.setlist!.steps[0].beatGroups).toEqual([3, 3]);
+  });
+
+  it("the mirror marks the step dirty when only the compound flag changes", async () => {
+    const { result, rerender } = mount();
+    await act(async () => {
+      result.current.loadSetlist({
+        ...CHAIN,
+        steps: [{ ...CHAIN.steps[0], beatGroups: [3, 3], compoundMeter: false }],
+      });
+    });
+    const settled = {
+      ...DEFAULT_TEST_STATE,
+      bpm: 70,
+      subdivision: 1,
+      beatGroups: [3, 3],
+      compoundMeter: false,
+      soundType: "click",
+      volume: 0.7,
+    };
+    rerender({ state: settled, isPlaying: false });
+    rerender({ state: { ...settled, compoundMeter: true }, isPlaying: false });
+
+    expect(result.current.setlist?.steps[0].compoundMeter).toBe(true);
+    expect(result.current.dirty).toBe(true);
+  });
+
   it("leaving the player does not stop the run, and stopping puts it back", async () => {
     const { result, rerender } = mount();
     await act(async () => {
@@ -276,6 +316,64 @@ describe("useSetlistSession", () => {
     // flag must not survive into the next run and hide the player.
     rerender({ state: DEFAULT_TEST_STATE, isPlaying: false });
     expect(result.current.editingWhileRunning).toBe(false);
+  });
+
+  describe("add to setlist (U9.8)", () => {
+    it("appends a step from the current state to a setlist that is not open", async () => {
+      const { result } = mount({ bpm: 133, beatGroups: [3, 3], compoundMeter: true });
+      // A setlist that exists but is not the one open in the editor.
+      let target!: Setlist;
+      await act(async () => {
+        target = await result.current.newSetlist();
+      });
+      await act(async () => {
+        result.current.closeSetlist();
+      });
+      expect(result.current.setlist).toBeNull();
+
+      await act(async () => {
+        await result.current.addToSetlist(target.id);
+      });
+
+      const updated = result.current.setlists.find((c) => c.id === target.id)!;
+      expect(updated.steps).toHaveLength(1);
+      expect(updated.steps[0]).toMatchObject({ bpm: 133, beatGroups: [3, 3], compoundMeter: true });
+      // Adding to a setlist you are not editing must not open it.
+      expect(result.current.setlist).toBeNull();
+      expect(result.current.addFeedback).toBe(target.name);
+    });
+
+    it("updates the open working copy too, so it does not read as dirty", async () => {
+      const { result } = mount({ bpm: 100 });
+      let target!: Setlist;
+      await act(async () => {
+        target = await result.current.newSetlist();
+      });
+      expect(result.current.setlist?.id).toBe(target.id);
+
+      await act(async () => {
+        await result.current.addToSetlist(target.id);
+      });
+
+      expect(result.current.setlist?.steps).toHaveLength(1);
+      expect(result.current.dirty).toBe(false);
+    });
+
+    it("creates a new setlist from the current state", async () => {
+      const { result } = mount({ bpm: 88, beatGroups: [5], freeMode: true });
+      let created: Setlist | null = null;
+      await act(async () => {
+        created = await result.current.addToNewSetlist("Encore");
+      });
+      expect(created!.name).toBe("Encore");
+      expect(created!.steps).toHaveLength(1);
+      expect(created!.steps[0]).toMatchObject({ bpm: 88, beatGroups: [5], freeMode: true });
+      expect(result.current.setlists.map((c) => c.id)).toContain(created!.id);
+      // Creating one from the button must not open it either — you are still
+      // on the metronome page, not the paragraph.
+      expect(result.current.setlist).toBeNull();
+      expect(result.current.addFeedback).toBe("Encore");
+    });
   });
 
   it("closing the setlist leaves nothing behind for the preset to fight with", async () => {

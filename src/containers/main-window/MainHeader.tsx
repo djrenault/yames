@@ -5,6 +5,7 @@ import { SOUND_TYPES } from "../../constants/metronome";
 import type { AppState, Setlist, Preset } from "../../types";
 import { PresetSaveBar } from "../../components/presets/PresetSaveBar";
 import { SetlistSaveBar } from "../../components/setlist/SetlistSaveBar";
+import { AddToSetlistButton } from "../../components/setlist/AddToSetlistButton";
 import { IS_MAC } from "../../hotkeys";
 
 /**
@@ -226,6 +227,18 @@ interface MainHeaderProps {
   onSaveSetlist: () => void;
   onRevertSetlist: () => void;
   onRenameSetlist: () => void;
+  /**
+   * "Add to setlist" (U9.8) — only meaningful on the metronome/drill pages,
+   * where there is a live dial-in worth saving as a step. Optional so other
+   * mounts of the header (there are none today, but PresetSaveBar/
+   * SetlistSaveBar both tolerate a bare mount) keep working without it.
+   */
+  addToSetlist?: {
+    setlists: Setlist[];
+    feedback: string | null;
+    onAdd: (setlistId: string) => void;
+    onAddNew: (name: string) => void;
+  };
   soundOpen: boolean;
   setSoundOpen: (v: boolean | ((p: boolean) => boolean)) => void;
   soundDropdownRef: Ref<HTMLDivElement>;
@@ -288,6 +301,7 @@ export function MainHeader({
   onSaveSetlist,
   onRevertSetlist,
   onRenameSetlist,
+  addToSetlist,
   soundOpen,
   setSoundOpen,
   soundDropdownRef,
@@ -367,6 +381,17 @@ export function MainHeader({
         )}
       </div>
       <div className="header-actions">
+        {/* Beat/drill only: a setlist step is a snapshot of what the
+            metronome is set to now, and that "now" only exists here — not
+            on the setlist tab, which already has its own Save. */}
+        {(view === "beat" || view === "drill") && addToSetlist && (
+          <AddToSetlistButton
+            setlists={addToSetlist.setlists}
+            feedback={addToSetlist.feedback}
+            onAdd={addToSetlist.onAdd}
+            onAddNew={addToSetlist.onAddNew}
+          />
+        )}
         <div className="header-sound-wrap" ref={soundDropdownRef}>
           <button
             className={`context-chip${soundOpen ? " context-chip-open" : ""}`}

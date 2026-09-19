@@ -15,6 +15,16 @@
     "addBeat": "Добавить долю",
     "removeBeat": "Убрать долю",
     "grouping": "группировка",
+    "custom": "Пользовательский",
+    "customCount": "Пользовательский · {{count}}",
+    "customPulse": "Импульс {{n}} — {{level}}",
+    "subdivisionCustomHint": "Задаёт скорость каждого импульса в вашем пользовательском паттерне",
+    "accentLevels": {
+      "off": "Выкл",
+      "weak": "Тихо",
+      "medium": "Обычный",
+      "strong": "Акцент"
+    },
     "tempo": "Темп",
     "tempoUp": "Быстрее",
     "tempoDown": "Медленнее",
@@ -24,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} мин",
     "lastSessionScore": "оценка {{score}}",
     "accent": {
-      "label": "Акцент",
+      "label": "Сильный акцент",
       "groups": "Начало групп",
       "all": "Каждая доля",
       "none": "Нет"

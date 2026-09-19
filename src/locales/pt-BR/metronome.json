@@ -15,6 +15,16 @@
     "addBeat": "Adicionar tempo",
     "removeBeat": "Remover tempo",
     "grouping": "agrupamento",
+    "custom": "Personalizado",
+    "customCount": "Personalizado · {{count}}",
+    "customPulse": "Pulso {{n}} — {{level}}",
+    "subdivisionCustomHint": "Define a velocidade de cada pulso no seu padrão personalizado",
+    "accentLevels": {
+      "off": "Desativado",
+      "weak": "Suave",
+      "medium": "Normal",
+      "strong": "Acento"
+    },
     "tempo": "Andamento",
     "tempoUp": "Aumentar o andamento",
     "tempoDown": "Diminuir o andamento",
@@ -24,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} min",
     "lastSessionScore": "nota {{score}}",
     "accent": {
-      "label": "Acento",
+      "label": "Acento forte",
       "groups": "Início de grupo",
       "all": "Cada tempo",
       "none": "Nenhum"

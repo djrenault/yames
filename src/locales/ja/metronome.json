@@ -15,6 +15,16 @@
     "addBeat": "拍を追加",
     "removeBeat": "拍を削除",
     "grouping": "グループ分け",
+    "custom": "カスタム",
+    "customCount": "カスタム・{{count}}",
+    "customPulse": "パルス {{n}} — {{level}}",
+    "subdivisionCustomHint": "カスタムパターンの各パルスの速さを設定します",
+    "accentLevels": {
+      "off": "オフ",
+      "weak": "控えめ",
+      "medium": "普通",
+      "strong": "アクセント"
+    },
     "tempo": "テンポ",
     "tempoUp": "テンポを上げる",
     "tempoDown": "テンポを下げる",
@@ -24,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} 分",
     "lastSessionScore": "スコア {{score}}",
     "accent": {
-      "label": "アクセント",
+      "label": "強いアクセント",
       "groups": "グループの頭",
       "all": "すべての拍",
       "none": "なし"

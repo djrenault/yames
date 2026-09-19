@@ -83,6 +83,25 @@ export async function setBeatGroups(groups: number[]): Promise<void> {
   return invoke("set_beat_groups", { groups });
 }
 
+/**
+ * Switch between the ordinary reading of `beatGroups` (one entry per
+ * group of equal-length beats) and the additive, eighth-note-based
+ * reading a 6/8-style meter needs (one entry per real beat, each that
+ * beat's own eighth-note count). See `AppState.compoundMeter`.
+ */
+export async function setCompoundMeter(enabled: boolean): Promise<void> {
+  return invoke("set_compound_meter", { enabled });
+}
+
+/**
+ * Per-pulse accent levels (0=Off, 1=Weak, 2=Medium, 3=Strong), replacing
+ * beatGroups + subdivision + accentMode entirely for this bar. Pass `[]`
+ * to clear back to the ordinary meter.
+ */
+export async function setCustomPattern(pattern: number[]): Promise<void> {
+  return invoke("set_custom_pattern", { pattern });
+}
+
 export async function setFreeMode(enabled: boolean): Promise<void> {
   return invoke("set_free_mode", { enabled });
 }
@@ -448,13 +467,22 @@ export async function listSetlists(): Promise<Setlist[]> {
   return legacy;
 }
 
-/** Upsert by id, keeping the existing position. New setlists go last. */
-export async function saveSetlist(setlist: Setlist): Promise<void> {
+/**
+ * Upsert by id, keeping the existing position. New setlists go last.
+ *
+ * Stamps `updatedAt` on every write and returns the stamped setlist, so a
+ * caller that keeps its own copy of the list (the setlist picker, the
+ * sidebar) sorts by an accurate "last modified" without a second read back
+ * from the store.
+ */
+export async function saveSetlist(setlist: Setlist): Promise<Setlist> {
+  const stamped: Setlist = { ...setlist, updatedAt: Date.now() };
   const setlists = await listSetlists();
-  const at = setlists.findIndex((c) => c.id === setlist.id);
-  if (at >= 0) setlists[at] = setlist;
-  else setlists.push(setlist);
+  const at = setlists.findIndex((c) => c.id === stamped.id);
+  if (at >= 0) setlists[at] = stamped;
+  else setlists.push(stamped);
   await storeSave(SETLISTS_KEY, setlists);
+  return stamped;
 }
 
 export async function deleteSetlist(id: string): Promise<void> {

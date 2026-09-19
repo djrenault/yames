@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { AppState, BeatEvent, Subdivision } from "../../types";
 // BeatEvent used for evaluation feedback; Subdivision for sub-row cast
 import type { useEvaluation } from "../../hooks/useEvaluation";
-import { setSubdivision, setBeatGroups } from "../../ipc";
+import { setSubdivision, setBeatGroups, setCustomPattern } from "../../ipc";
 import {
   getTempoMarking,
   getTempoScale,
@@ -273,18 +273,24 @@ export function MetronomeView({
           <MeterPresets
             beatGroups={state.beatGroups}
             freeMode={state.freeMode}
+            compoundMeter={state.compoundMeter ?? false}
+            customPattern={state.customPattern ?? []}
             stepper={
               <BeatStepper
                 beatGroups={state.beatGroups}
                 subdivision={state.subdivision}
                 freeMode={state.freeMode}
                 onBeatGroupsChange={(next) => setBeatGroups(next)}
+                compoundMeter={state.compoundMeter ?? false}
+                customPattern={state.customPattern ?? []}
+                onCustomPatternChange={(next) => setCustomPattern(next)}
               />
             }
           />
           {/* Right of the meter row, as the artboard draws it: the meter says
-              where the accents fall, and this says whether they fall at all. */}
-          <AccentControl mode={state.accentMode} />
+              where the accents fall, and this says whether they fall at all.
+              Not meaningful once every pulse has its own explicit level. */}
+          {!(state.customPattern?.length > 0) && <AccentControl mode={state.accentMode} />}
         </div>
 
         <GroupEditor
@@ -295,8 +301,11 @@ export function MetronomeView({
           activeSub={activeSub}
           isDownbeat={isDownbeat}
           freeMode={state.freeMode}
+          compoundMeter={state.compoundMeter ?? false}
           accentMode={state.accentMode ?? "groups"}
           isAccentBeat={currentBeat?.isAccent ?? false}
+          customPattern={state.customPattern ?? []}
+          onCustomPatternChange={(next) => setCustomPattern(next)}
           feedback={dotFeedback}
           onBeatGroupsChange={(next) => {
             // No notifySettingsChange() — useSession watches the meter
@@ -320,25 +329,37 @@ export function MetronomeView({
         />
       </section>
 
-      <section className="sub-section" data-tour="subdivision">
-        <span className="stage-label">{t("metronome.subdivision")}</span>
-        <div className="sub-row">
-          {([1, 2, 3, 4, 5, 6] as Subdivision[]).map((sub, i) => (
-            <button
-              key={sub}
-              className={`sub-row-btn view-stagger-item ${state.subdivision === sub ? "active" : ""}`}
-              style={{ animationDelay: `${100 + i * 25}ms` }}
-              onClick={() => setSubdivision(sub)}
-            >
-              <SubdivisionIcon sub={sub} size={28} />
-              {/* The six glyphs are near-identical at a glance and used to need
-                  a tooltip to tell apart. Naming them is the fix — UI_DECISIONS
-                  U2.2. */}
-              <span className="sub-row-label">{t(`subdiv.${sub}`)}</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* A compound meter (6/8, 7/8, 8/8, 9/8, 12/8) derives its own
+          eighth-note rate from beatGroups — there is no coarser or finer
+          "Subdivision" to pick, so the control disappears rather than
+          offering choices the engine ignores. */}
+      {!(state.compoundMeter ?? false) && (
+        <section className="sub-section" data-tour="subdivision">
+          <span className="stage-label">{t("metronome.subdivision")}</span>
+          {/* Only meaningful to call out once there's a custom pattern to
+              apply it to — the grouped/FREE meter has always used this
+              control and needs no extra explanation. */}
+          {(state.customPattern?.length ?? 0) > 0 && (
+            <span className="sub-custom-hint">{t("metronome.subdivisionCustomHint")}</span>
+          )}
+          <div className="sub-row">
+            {([1, 2, 3, 4, 5, 6] as Subdivision[]).map((sub, i) => (
+              <button
+                key={sub}
+                className={`sub-row-btn view-stagger-item ${state.subdivision === sub ? "active" : ""}`}
+                style={{ animationDelay: `${100 + i * 25}ms` }}
+                onClick={() => setSubdivision(sub)}
+              >
+                <SubdivisionIcon sub={sub} size={28} />
+                {/* The six glyphs are near-identical at a glance and used to need
+                    a tooltip to tell apart. Naming them is the fix — UI_DECISIONS
+                    U2.2. */}
+                <span className="sub-row-label">{t(`subdiv.${sub}`)}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   );
 }

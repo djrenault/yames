@@ -103,3 +103,41 @@ describe("FREE mode — preset round trip", () => {
     });
   });
 });
+
+describe("compound meter — preset round trip", () => {
+  it("saves compoundMeter into the preset alongside its groups", async () => {
+    const preset = await savePresetFromState({
+      ...DEFAULT_TEST_STATE,
+      beatGroups: [3, 3],
+      timeSignature: 6,
+      compoundMeter: true,
+    });
+    expect(preset.compoundMeter).toBe(true);
+    expect(preset.beatGroups).toEqual([3, 3]);
+  });
+
+  it("restores compoundMeter when the preset is loaded, so 6/8 plays as real 6/8 again", async () => {
+    const preset = await savePresetFromState({
+      ...DEFAULT_TEST_STATE,
+      beatGroups: [3, 3],
+      timeSignature: 6,
+      compoundMeter: true,
+    });
+    // Fresh window, ordinary meter, with the saved preset on disk.
+    setInvokeResponse("get_state", () => DEFAULT_TEST_STATE);
+    setInvokeResponse("list_presets", () => [preset]);
+    render(<MainWindow />);
+
+    const item = await screen.findByText("Free Nine");
+    fireEvent.click(item);
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith("set_compound_meter", {
+        enabled: true,
+      }),
+    );
+    expect(mockInvoke).toHaveBeenCalledWith("set_beat_groups", {
+      groups: [3, 3],
+    });
+  });
+});

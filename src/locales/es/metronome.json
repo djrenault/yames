@@ -15,6 +15,16 @@
     "addBeat": "Añadir pulso",
     "removeBeat": "Quitar pulso",
     "grouping": "agrupación",
+    "custom": "Personalizado",
+    "customCount": "Personalizado · {{count}}",
+    "customPulse": "Pulso {{n}} — {{level}}",
+    "subdivisionCustomHint": "Define la velocidad de cada pulso en tu patrón personalizado",
+    "accentLevels": {
+      "off": "Apagado",
+      "weak": "Suave",
+      "medium": "Normal",
+      "strong": "Acento"
+    },
     "tempo": "Tempo",
     "tempoUp": "Subir el tempo",
     "tempoDown": "Bajar el tempo",
@@ -24,7 +34,7 @@
     "lastSessionMinutes_other": "{{count}} min",
     "lastSessionScore": "puntuación {{score}}",
     "accent": {
-      "label": "Acento",
+      "label": "Acento fuerte",
       "groups": "Inicio de grupo",
       "all": "Cada pulso",
       "none": "Ninguno"

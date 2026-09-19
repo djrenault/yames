@@ -122,6 +122,20 @@ describe("preset ↔ step (U9.1)", () => {
   it("takes a name for the preset when the step's is not the one wanted", () => {
     expect(setlistStepToPreset(stepOf("Verse"), "Verse (fast)").name).toBe("Verse (fast)");
   });
+
+  it("carries compoundMeter and customPattern from a preset onto its step", () => {
+    const s = presetToSetlistStep(preset({ beatGroups: [3, 3], compoundMeter: true }));
+    expect(s.compoundMeter).toBe(true);
+    const custom = presetToSetlistStep(preset({ customPattern: [3, 1, 2] }));
+    expect(custom.customPattern).toEqual([3, 1, 2]);
+  });
+
+  it("carries compoundMeter and customPattern from a step onto its preset, and back again unchanged", () => {
+    const s: SetlistStep = { ...stepOf("Waltz-ish"), beatGroups: [3, 3], compoundMeter: true };
+    const p = setlistStepToPreset(s);
+    expect(p.compoundMeter).toBe(true);
+    expect(presetToSetlistStep(p).compoundMeter).toBe(true);
+  });
 });
 
 describe("setlists", () => {
