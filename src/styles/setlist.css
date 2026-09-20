@@ -380,6 +380,7 @@
    its second, comes to about 75px — twelve steps in 997px, one wheel-scroll,
    and every phrase still a control. Nothing expands, so nothing moves. */
 .setlist-step {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -591,18 +592,61 @@
   cursor: grabbing;
 }
 
+/* The cursor for the rest of a step drag, once the pointer has left the
+   handle itself. `.setlist-step` sets its own `cursor: pointer`, and a
+   descendant's own cursor always wins over an ancestor's — `!important`
+   here is what actually keeps it "grabbing" over a row, a button, or
+   plain whitespace alike, not just the handle you started on. */
+body.setlist-reordering,
+body.setlist-reordering * {
+  cursor: grabbing !important;
+}
+
 /* The row being picked up. Faded rather than hidden, so the list does not
    jump while you decide where it goes. */
 .setlist-step.dragging {
   opacity: 0.45;
 }
 
-/* Where it would land if dropped now. Specificity ties `.selected`/`.running`
-   on the class count, so this rule has to come after them to win when a drag
-   passes over the currently selected or running step. */
-.setlist-step.drag-over {
-  border-top-color: var(--accent);
-  border-top-width: 2px;
+/* The insertion line for one of the `steps.length + 1` gaps a drag can
+   land in — see `gapFromPoint`/`spliceTargetFor` in SetlistParagraph.tsx. A
+   child of the row it sits above, absolutely positioned over its top edge,
+   rather than a real sibling between rows: a sibling there would have sat
+   between two `.setlist-step`s and broken the `+` adjacency the hairline
+   above depends on. `pointer-events: none` so it never itself becomes the
+   drag/drop target it is only there to announce. */
+.setlist-step-dropline {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  opacity: 0;
+  box-shadow: 0 0 8px var(--accent-glow, transparent);
+  transition: opacity 0.1s ease;
+  pointer-events: none;
+}
+
+.setlist-step-dropline[data-active] {
+  opacity: 1;
+}
+
+.setlist-step > .setlist-step-dropline {
+  top: -3px;
+}
+
+/* Gap `steps.length`, after the last row — the one gap no row's own leading
+   dropline can stand for. A dedicated strip so it is a real, generously
+   sized target rather than the last few pixels of the last row's bottom
+   edge. */
+.setlist-step-end-zone {
+  position: relative;
+  height: 14px;
+}
+
+.setlist-step-end-zone .setlist-step-dropline {
+  top: 6px;
 }
 
 .setlist-volume-range {

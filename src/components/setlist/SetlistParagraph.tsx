@@ -93,6 +93,47 @@ function GripIcon() {
   );
 }
 
+/**
+ * Which of the `steps.length + 1` gaps a point at `clientY` is asking for,
+ * against the CURRENT on-screen position of every row — the top half of a
+ * row means "before it", the bottom half "after it" (equivalently: before
+ * the next one, or off the end once every row is above the point).
+ *
+ * One listener on the list itself computes this from fresh geometry rather
+ * than each row owning its own `dragover`/`dragleave`. Native drag-and-drop
+ * only fires `dragover` intermittently — a handful of times a second, not
+ * on every pixel of motion — and which nested element it lands on inside a
+ * row this deep (StepSentence alone is a dozen elements) is not something
+ * to depend on either. A single event anywhere in the list, fed accurate
+ * `clientY` and a fresh read of every row's own rect, is enough to get the
+ * right answer regardless of which child happened to receive it — which is
+ * what made the indicator "sometimes" not show, or lag a row behind: it was
+ * waiting on a specific nested element to be the one the browser chose to
+ * fire on.
+ */
+function gapFromPoint(rows: HTMLElement[], clientY: number): number {
+  for (let i = 0; i < rows.length; i++) {
+    const rect = rows[i].getBoundingClientRect();
+    if (clientY < rect.top + rect.height / 2) return i;
+  }
+  return rows.length;
+}
+
+/**
+ * The gap a drop targets is counted against the ORIGINAL array (see
+ * `gapFromPoint`): gap 2 means "step 2 ends up third", whichever step that
+ * used to be. `reorderSteps` takes a splice-style destination in the array
+ * with the dragged step already REMOVED, and those two only agree when the
+ * gap sits before the dragged step. Drag a step down past others and every
+ * gap on the far side of it has shifted left by one in the post-removal
+ * array — miss that and the step lands one slot past the line it was
+ * dropped on, after the row the line was drawn above instead of before it,
+ * which was exactly the bug report.
+ */
+function spliceTargetFor(gap: number, dragIndex: number): number {
+  return gap <= dragIndex ? gap : gap - 1;
+}
+
 export function SetlistParagraph({
   setlist,
   selectedStepId,
@@ -110,13 +151,68 @@ export function SetlistParagraph({
   /**
    * Drag-to-reorder, on top of the up/down buttons rather than instead of
    * them: dragging is pointer-only, so the buttons stay as the keyboard and
-   * assistive-tech path. `dragIndex` is the step being picked up;
-   * `dragOverIndex` is the row it would land on if dropped now, purely for
-   * the insertion-line indicator — the actual move happens once, on drop,
-   * through the same `reorderSteps` the buttons already call.
+   * assistive-tech path. `dragIndex` is the step being picked up; `dropGap`
+   * is which of the `steps.length + 1` gaps between (and around) the steps
+   * it would land in if dropped now — see `gapFromPoint`. The actual move
+   * happens once, on release, through the same `reorderSteps` the buttons
+   * already call.
+   *
+   * Plain mouse events, not HTML5 `draggable`/`dragover`/`drop`: a native
+   * drag session only fires `dragover` intermittently — a handful of times
+   * a second, not on every pixel of motion, and a fast flick across the
+   * list can arrive with none at all between picking it up and letting go.
+   * That is the actual mechanism behind "sometimes a bar appears, sometimes
+   * it doesn't" — not a bug in what the handler does with the event, but
+   * that the browser never called it. `mousemove` on `window` has no such
+   * throttling. Every serious drag-reorder library (dnd-kit, sortablejs,
+   * react-beautiful-dnd) makes the same call for the same reason.
    */
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dropGap, setDropGap] = useState<number | null>(null);
+
+  const rowsInList = () => [...(listRef.current?.querySelectorAll<HTMLElement>(".setlist-step") ?? [])];
+
+  useEffect(() => {
+    if (dragIndex === null) return;
+
+    // A class, not `body.style.cursor` directly: `.setlist-step` sets its
+    // own `cursor: pointer`, and a descendant's own cursor always wins over
+    // whatever an ancestor's inline style says — inline specificity is not
+    // in play across different elements. `!important` on the CSS rule this
+    // class carries is what actually keeps the cursor "grabbing" over a row,
+    // a button, or plain whitespace alike for the rest of the gesture.
+    document.body.classList.add("setlist-reordering");
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+
+    const onMove = (e: MouseEvent) => {
+      const gap = gapFromPoint(rowsInList(), e.clientY);
+      setDropGap((current) => (current === gap ? current : gap));
+    };
+    const onUp = (e: MouseEvent) => {
+      const gap = gapFromPoint(rowsInList(), e.clientY);
+      setDragIndex((from) => {
+        if (from === null) return null;
+        const to = spliceTargetFor(gap, from);
+        if (to !== from) onChange(reorderSteps(setlist, from, to));
+        return null;
+      });
+      setDropGap(null);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp, { once: true });
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.classList.remove("setlist-reordering");
+      document.body.style.userSelect = previousUserSelect;
+    };
+    // `setlist`/`onChange` are read fresh via the closure captured when the
+    // drag STARTS (dragIndex flips from null); re-running this effect
+    // mid-drag over every keystroke elsewhere in the app would tear down
+    // and reattach the window listeners for no reason.
+  }, [dragIndex]);
 
   const total = setlistSeconds(setlist);
 
@@ -210,26 +306,9 @@ export function SetlistParagraph({
             <div
               className={`setlist-step${selected ? " selected" : ""}${running ? " running" : ""}${
                 dragIndex === index ? " dragging" : ""
-              }${dragOverIndex === index && dragIndex !== null && dragIndex !== index ? " drag-over" : ""}`}
+              }`}
               key={step.id}
               ref={selected ? openRef : undefined}
-              onDragOver={(e) => {
-                if (dragIndex === null) return;
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-                if (dragOverIndex !== index) setDragOverIndex(index);
-              }}
-              onDragLeave={() => {
-                if (dragOverIndex === index) setDragOverIndex(null);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (dragIndex !== null && dragIndex !== index) {
-                  onChange(reorderSteps(setlist, dragIndex, index));
-                }
-                setDragIndex(null);
-                setDragOverIndex(null);
-              }}
               /*
                * `role` and `tabIndex` are load-bearing, not decoration.
                *
@@ -263,26 +342,18 @@ export function SetlistParagraph({
               }}
             >
               {/*
-               * A real `<button>`, not a plain `draggable` div — `useDrag`
-               * (the Tauri window-drag hook) calls `startDragging()` on any
+               * A real `<button>`, not a plain `<div>` — `useDrag` (the
+               * Tauri window-drag hook) calls `startDragging()` on any
                * mousedown that doesn't land on something `isInteractive`
                * considers a control, and this project has already paid for
                * that mistake twice (see the note on the row's own
-               * role/tabIndex above). A `<button>` is in its interactive-tags
-               * list, so a mousedown here starts the HTML5 drag instead of
-               * carrying the window off with it.
+               * role/tabIndex above). A `<button>` is in its
+               * interactive-tags list, so a mousedown here is left alone
+               * for `onMouseDown` below to handle, instead of being read as
+               * window furniture and carrying the window off with it.
                *
                * Pointer-only on purpose: the up/down buttons beside it are
                * the keyboard and assistive-tech path for the same move.
-               *
-               * The other half of making this fire at all lives outside this
-               * file: Tauri's main window sets `dragDropEnabled: false`
-               * (tauri.conf.json). Left at its default of `true`, the
-               * webview intercepts drag events at the OS level for native
-               * file-drop support, and `dragover`/`drop` never reach the
-               * DOM at all — `dragstart` still fires (it never leaves the
-               * page), so the handle drags and the row dims, and dropping
-               * it anywhere does nothing. That was exactly the bug report.
                */}
               <button
                 type="button"
@@ -290,20 +361,30 @@ export function SetlistParagraph({
                 aria-hidden="true"
                 tabIndex={-1}
                 title={t("setlist.dragToReorder")}
-                draggable
                 onClick={(e) => e.stopPropagation()}
-                onDragStart={(e) => {
+                onMouseDown={(e) => {
+                  if (e.button !== 0) return;
+                  // Stops the browser's own text-selection drag, which a
+                  // plain mousedown on anything next to text otherwise
+                  // starts — the reason this reads from mouse events at all
+                  // instead of HTML5 `draggable` rather than a bug to work
+                  // around a second time.
+                  e.preventDefault();
                   setDragIndex(index);
-                  e.dataTransfer.effectAllowed = "move";
-                  e.dataTransfer.setData("text/plain", String(index));
-                }}
-                onDragEnd={() => {
-                  setDragIndex(null);
-                  setDragOverIndex(null);
                 }}
               >
                 <GripIcon />
               </button>
+              {/* The insertion line for gap `index` — before this row.
+                  Absolutely positioned over the row's own top edge rather
+                  than a sibling element between rows, so it needs no change
+                  to the `.setlist-step + .setlist-step` hairline rule below
+                  (a real DOM sibling here would have broken that adjacency
+                  and silently dropped the seam between every step). */}
+              <div
+                className="setlist-step-dropline"
+                data-active={dragIndex !== null && dropGap === index ? "" : undefined}
+              />
               <span className="setlist-step-no">
                 {running ? t("setlist.nowShort") : index + 1}
               </span>
@@ -371,6 +452,21 @@ export function SetlistParagraph({
             </div>
           );
         })}
+
+        {/* Gap `steps.length` — after the last row, the one gap no row's own
+            leading dropline can represent (there's no row after it to carry
+            it). Purely a visual landing strip: `window`'s own mousemove/
+            mouseup already cover the whole gesture regardless of what's
+            under the pointer, so there is nothing for this element itself
+            to listen for. */}
+        {setlist.steps.length > 0 && (
+          <div className="setlist-step-end-zone">
+            <div
+              className="setlist-step-dropline"
+              data-active={dragIndex !== null && dropGap === setlist.steps.length ? "" : undefined}
+            />
+          </div>
+        )}
 
         {setlist.steps.length === 0 && (
           <p className="setlist-paragraph-empty">{t("setlist.emptyLead")}</p>
