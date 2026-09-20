@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   addStep,
   createSetlist,
+  duplicateSetlist as duplicateSetlistData,
   renameSetlist as renameSetlistData,
   stateToSetlistStep,
   updateStep,
@@ -11,6 +12,7 @@ import {
 import {
   deleteSetlist as deleteSetlistIpc,
   listSetlists,
+  reorderSetlists as reorderSetlistsIpc,
   saveSetlist as saveSetlistIpc,
 } from "../../../ipc";
 import { meterKey } from "../../../utils/meter";
@@ -323,6 +325,42 @@ export function useSetlistSession({
   );
 
   /**
+   * The sidebar's own drag-to-reorder (distinct from `reorderSteps`, which
+   * reorders a setlist's STEPS): `ids` is the library's rows in their new
+   * order. Applied to local state immediately, same as every other setlist
+   * edit here, then persisted — `reorderSetlistsIpc` re-reads the store
+   * itself rather than taking a full array, so a reorder issued against a
+   * stale `setlists` cannot silently drop one saved from another window.
+   */
+  const reorderSetlists = useCallback((ids: string[]) => {
+    setSetlists((prev) => {
+      const byId = new Map(prev.map((c) => [c.id, c]));
+      const ordered = ids.map((id) => byId.get(id)).filter((c): c is Setlist => !!c);
+      return ordered.length === prev.length ? ordered : prev;
+    });
+    reorderSetlistsIpc(ids).catch(() => {});
+  }, []);
+
+  /**
+   * A whole new setlist, with its own copy of every step (U9's `duplicateSetlist`
+   * had no caller until now). Persisted immediately, like `newSetlist` — there
+   * is no working copy to save later, since this isn't the one you have open.
+   * Named distinctly so two rows with the same name don't sit in the library
+   * looking identical.
+   */
+  const duplicateSetlist = useCallback(
+    async (id: string) => {
+      const target = setlists.find((c) => c.id === id);
+      if (!target) return null;
+      const copy = duplicateSetlistData(target, t("setlist.copyName", { name: target.name }));
+      const stamped = await saveSetlistIpc(copy).catch(() => copy);
+      setSetlists((prev) => upsertSetlist(prev, stamped));
+      return stamped;
+    },
+    [setlists, t],
+  );
+
+  /**
    * "Add to setlist" (U9.8) — from the metronome page, not the paragraph.
    *
    * Reaching this button means the setlist you are adding to is usually not
@@ -427,6 +465,8 @@ export function useSetlistSession({
     revertSetlist,
     deleteSetlist,
     renameSetlist,
+    duplicateSetlist,
+    reorderSetlists,
     addStepFromNow,
     addToSetlist,
     addToNewSetlist,

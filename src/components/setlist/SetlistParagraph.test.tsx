@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SetlistParagraph } from "./SetlistParagraph";
 import type { Setlist, SetlistStep } from "../../types";
@@ -75,6 +75,52 @@ function draw(over: Partial<Parameters<typeof SetlistParagraph>[0]> = {}) {
 }
 
 const blocks = (c: HTMLElement) => [...c.querySelectorAll<HTMLElement>(".setlist-step")];
+const dragHandles = (c: HTMLElement) => [...c.querySelectorAll<HTMLElement>(".setlist-step-drag")];
+
+/**
+ * The drag lives on `window`'s own `mousemove`/`mouseup`, not on any one
+ * row — see the note on `SetlistParagraph`'s drag effect for why (native
+ * HTML5 `dragover` only fires intermittently, which is what "sometimes a
+ * bar appears, sometimes it doesn't" actually was). Firing on a row still
+ * reaches these: both events bubble, and `window` is the top of every
+ * bubble chain regardless of where an event started.
+ */
+function pickUp(handle: HTMLElement) {
+  fireEvent.mouseDown(handle, { button: 0 });
+}
+
+function moveTo(el: HTMLElement, clientY: number) {
+  fireEvent.mouseMove(el, { clientY });
+}
+
+function release(el: HTMLElement, clientY: number) {
+  fireEvent.mouseUp(el, { clientY });
+}
+
+/**
+ * happy-dom's `getBoundingClientRect()` returns an all-zero rect with no
+ * real layout engine behind it, and `gapFromPoint` needs a real one to tell
+ * a drag over the top half of a row from the bottom half. Stacks each row
+ * 40px tall starting at 0, so `topOf(i)` / `bottomOf(i)` give a `clientY`
+ * that lands unambiguously in one half.
+ */
+function mockRowRects(container: HTMLElement) {
+  blocks(container).forEach((el, i) => {
+    vi.spyOn(el, "getBoundingClientRect").mockReturnValue({
+      top: i * 40,
+      bottom: i * 40 + 40,
+      height: 40,
+      left: 0,
+      right: 200,
+      width: 200,
+      x: 0,
+      y: i * 40,
+      toJSON: () => {},
+    });
+  });
+}
+const topOf = (i: number) => i * 40 + 10;
+const bottomOf = (i: number) => i * 40 + 30;
 
 describe("every step is open", () => {
   it("draws all of them, not one", () => {
@@ -195,6 +241,135 @@ describe("the rest of the paragraph", () => {
     draw({ setlist: { ...SETLIST, steps: [] }, selectedStepId: null });
     expect(screen.getByText(/plays your steps in order/i)).toBeTruthy();
     expect(screen.getByText("+ Add a step")).toBeTruthy();
+  });
+});
+
+describe("drag to reorder", () => {
+  it("has a handle on every step, on top of the up/down buttons", () => {
+    // Pointer-only: the buttons stay as the keyboard/assistive-tech path.
+    const { container } = draw();
+    expect(dragHandles(container)).toHaveLength(3);
+    for (const tools of container.querySelectorAll(".setlist-step-tools")) {
+      expect(within(tools as HTMLElement).getAllByRole("button")).toHaveLength(4);
+    }
+  });
+
+  it("dropping on a row's top half inserts before it", () => {
+    const onChange = vi.fn();
+    const { container } = draw({ onChange });
+    mockRowRects(container);
+    pickUp(dragHandles(container)[0]);
+    moveTo(blocks(container)[2], topOf(2));
+    release(blocks(container)[2], topOf(2));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const next = onChange.mock.calls[0][0] as Setlist;
+    // s1 lands directly ahead of s3 — where the line was drawn, not past it.
+    expect(next.steps.map((s) => s.id)).toEqual(["s2", "s1", "s3"]);
+  });
+
+  it("dropping on a row's bottom half inserts after it", () => {
+    const onChange = vi.fn();
+    const { container } = draw({ onChange });
+    mockRowRects(container);
+    pickUp(dragHandles(container)[0]);
+    moveTo(blocks(container)[1], bottomOf(1));
+    release(blocks(container)[1], bottomOf(1));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const next = onChange.mock.calls[0][0] as Setlist;
+    expect(next.steps.map((s) => s.id)).toEqual(["s2", "s1", "s3"]);
+  });
+
+  it("shows the line on the hovered row's own top half, and on the next row for its bottom half", () => {
+    const { container } = draw();
+    mockRowRects(container);
+    pickUp(dragHandles(container)[0]);
+
+    const dropline = (i: number) => blocks(container)[i].querySelector(".setlist-step-dropline");
+
+    moveTo(blocks(container)[2], topOf(2));
+    expect(dropline(2)?.hasAttribute("data-active")).toBe(true);
+    expect(dropline(1)?.hasAttribute("data-active")).toBe(false);
+
+    // The bottom half of row 1 is the same gap as the top of row 2 — the
+    // line has to move to row 2's own leading edge either way, since row 1
+    // has no trailing indicator of its own.
+    moveTo(blocks(container)[1], bottomOf(1));
+    expect(dropline(2)?.hasAttribute("data-active")).toBe(true);
+    expect(dropline(1)?.hasAttribute("data-active")).toBe(false);
+  });
+
+  it("lets you drop after the last step, in the dedicated end zone", () => {
+    const onChange = vi.fn();
+    const { container } = draw({ onChange });
+    mockRowRects(container);
+    const endZone = container.querySelector(".setlist-step-end-zone") as HTMLElement;
+    expect(endZone).not.toBeNull();
+
+    pickUp(dragHandles(container)[0]);
+    moveTo(endZone, bottomOf(2) + 20);
+    expect(endZone.querySelector(".setlist-step-dropline")?.hasAttribute("data-active")).toBe(true);
+
+    release(endZone, bottomOf(2) + 20);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const next = onChange.mock.calls[0][0] as Setlist;
+    expect(next.steps.map((s) => s.id)).toEqual(["s2", "s3", "s1"]);
+  });
+
+  it("marks the picked-up row", () => {
+    const { container } = draw();
+    pickUp(dragHandles(container)[0]);
+    expect(blocks(container)[0].className).toContain("dragging");
+  });
+
+  it("puts the cursor in charge of the whole gesture, not just the handle", () => {
+    // `.setlist-step` sets its own `cursor: pointer`; without the body
+    // class overriding it, dragging over a row would visibly change the
+    // cursor away from "grabbing" mid-gesture.
+    const { container } = draw();
+    pickUp(dragHandles(container)[0]);
+    expect(document.body.classList.contains("setlist-reordering")).toBe(true);
+    release(blocks(container)[0], topOf(0));
+    expect(document.body.classList.contains("setlist-reordering")).toBe(false);
+  });
+
+  it("clears the drag markers once it lands", () => {
+    const { container } = draw();
+    mockRowRects(container);
+    pickUp(dragHandles(container)[0]);
+    moveTo(blocks(container)[2], topOf(2));
+    release(blocks(container)[2], topOf(2));
+
+    for (const block of blocks(container)) {
+      expect(block.className).not.toContain("dragging");
+      expect(block.querySelector(".setlist-step-dropline")?.hasAttribute("data-active")).toBe(false);
+    }
+  });
+
+  it("does nothing when dropped back where it already was", () => {
+    // Both the gap right before and right after the dragged step are a
+    // no-op — dropping it back next to itself is not a move.
+    const onChange = vi.fn();
+    const { container } = draw({ onChange });
+    mockRowRects(container);
+
+    pickUp(dragHandles(container)[1]);
+    moveTo(blocks(container)[1], topOf(1));
+    release(blocks(container)[1], topOf(1));
+    expect(onChange).not.toHaveBeenCalled();
+
+    pickUp(dragHandles(container)[1]);
+    moveTo(blocks(container)[1], bottomOf(1));
+    release(blocks(container)[1], bottomOf(1));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("does not select the step just from grabbing its handle", () => {
+    const onSelectStep = vi.fn();
+    const { container } = draw({ selectedStepId: "s1", onSelectStep });
+    fireEvent.click(dragHandles(container)[2]);
+    expect(onSelectStep).not.toHaveBeenCalled();
   });
 });
 

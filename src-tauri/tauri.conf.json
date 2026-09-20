@@ -27,7 +27,8 @@
         "visible": false,
         "theme": "Dark",
         "titleBarStyle": "Overlay",
-        "hiddenTitle": true
+        "hiddenTitle": true,
+        "dragDropEnabled": false
       },
       {
         "label": "floating",

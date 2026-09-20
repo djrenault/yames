@@ -89,6 +89,162 @@ async function openSearch(): Promise<HTMLInputElement> {
   })) as HTMLInputElement;
 }
 
+const setlistRows = (c: HTMLElement) => [...c.querySelectorAll<HTMLElement>(".setlist-item")];
+const setlistDragHandles = (c: HTMLElement) => [...c.querySelectorAll<HTMLElement>(".setlist-item-drag")];
+
+/**
+ * Same mouse-event drag as SetlistParagraph's step reorder (see its test
+ * file for why: native HTML5 `dragover` fires only intermittently, not on
+ * every pixel of motion).
+ */
+function pickUp(handle: HTMLElement) {
+  fireEvent.mouseDown(handle, { button: 0 });
+}
+function moveTo(el: HTMLElement, clientY: number) {
+  fireEvent.mouseMove(el, { clientY });
+}
+function release(el: HTMLElement, clientY: number) {
+  fireEvent.mouseUp(el, { clientY });
+}
+
+/** happy-dom's `getBoundingClientRect` has no real layout behind it; stack
+ * rows 40px apart so `topOf`/`bottomOf` land unambiguously in one half. */
+function mockRowRects(container: HTMLElement) {
+  setlistRows(container).forEach((el, i) => {
+    vi.spyOn(el, "getBoundingClientRect").mockReturnValue({
+      top: i * 40,
+      bottom: i * 40 + 40,
+      height: 40,
+      left: 0,
+      right: 200,
+      width: 200,
+      x: 0,
+      y: i * 40,
+      toJSON: () => {},
+    } as DOMRect);
+  });
+}
+const topOf = (i: number) => i * 40 + 10;
+const bottomOf = (i: number) => i * 40 + 30;
+
+describe("drag to reorder setlists", () => {
+  const three = () => [
+    makeSetlist({ id: "ch1", name: "Warm-up" }),
+    makeSetlist({ id: "ch2", name: "Scales" }),
+    makeSetlist({ id: "ch3", name: "Cooldown" }),
+  ];
+
+  it("has a handle on every setlist row", async () => {
+    setInvokeResponse("list_presets", () => []);
+    const { container } = render(<PresetSidebar {...baseProps} view="setlist" setlists={three()} />);
+    await waitFor(() => expect(setlistRows(container)).toHaveLength(3));
+    expect(setlistDragHandles(container)).toHaveLength(3);
+  });
+
+  it("dropping on a row's top half inserts before it", async () => {
+    setInvokeResponse("list_presets", () => []);
+    const onReorderSetlists = vi.fn();
+    const { container } = render(
+      <PresetSidebar {...baseProps} view="setlist" setlists={three()} onReorderSetlists={onReorderSetlists} />,
+    );
+    await waitFor(() => expect(setlistRows(container)).toHaveLength(3));
+    mockRowRects(container);
+    pickUp(setlistDragHandles(container)[0]);
+    moveTo(setlistRows(container)[2], topOf(2));
+    release(setlistRows(container)[2], topOf(2));
+
+    expect(onReorderSetlists).toHaveBeenCalledTimes(1);
+    // ch1 lands directly ahead of ch3 — where the line was drawn, not past it.
+    expect(onReorderSetlists).toHaveBeenCalledWith(["ch2", "ch1", "ch3"]);
+  });
+
+  it("dropping on a row's bottom half inserts after it", async () => {
+    setInvokeResponse("list_presets", () => []);
+    const onReorderSetlists = vi.fn();
+    const { container } = render(
+      <PresetSidebar {...baseProps} view="setlist" setlists={three()} onReorderSetlists={onReorderSetlists} />,
+    );
+    await waitFor(() => expect(setlistRows(container)).toHaveLength(3));
+    mockRowRects(container);
+    pickUp(setlistDragHandles(container)[0]);
+    moveTo(setlistRows(container)[1], bottomOf(1));
+    release(setlistRows(container)[1], bottomOf(1));
+
+    expect(onReorderSetlists).toHaveBeenCalledWith(["ch2", "ch1", "ch3"]);
+  });
+
+  it("lets you drop after the last setlist, in the dedicated end zone", async () => {
+    setInvokeResponse("list_presets", () => []);
+    const onReorderSetlists = vi.fn();
+    const { container } = render(
+      <PresetSidebar {...baseProps} view="setlist" setlists={three()} onReorderSetlists={onReorderSetlists} />,
+    );
+    await waitFor(() => expect(setlistRows(container)).toHaveLength(3));
+    mockRowRects(container);
+    const endZone = container.querySelector(".setlist-item-end-zone") as HTMLElement;
+    expect(endZone).not.toBeNull();
+
+    pickUp(setlistDragHandles(container)[0]);
+    moveTo(endZone, bottomOf(2) + 5);
+    expect(endZone.querySelector(".setlist-item-dropline")?.hasAttribute("data-active")).toBe(true);
+
+    release(endZone, bottomOf(2) + 5);
+    expect(onReorderSetlists).toHaveBeenCalledWith(["ch2", "ch3", "ch1"]);
+  });
+
+  it("marks the picked-up row and drives the body cursor override for the gesture", async () => {
+    setInvokeResponse("list_presets", () => []);
+    const { container } = render(<PresetSidebar {...baseProps} view="setlist" setlists={three()} />);
+    await waitFor(() => expect(setlistRows(container)).toHaveLength(3));
+    pickUp(setlistDragHandles(container)[0]);
+    expect(setlistRows(container)[0].className).toContain("dragging");
+    expect(document.body.classList.contains("setlist-reordering")).toBe(true);
+    release(setlistRows(container)[0], topOf(0));
+    expect(document.body.classList.contains("setlist-reordering")).toBe(false);
+  });
+
+  it("does nothing when dropped back where it already was", async () => {
+    setInvokeResponse("list_presets", () => []);
+    const onReorderSetlists = vi.fn();
+    const { container } = render(
+      <PresetSidebar {...baseProps} view="setlist" setlists={three()} onReorderSetlists={onReorderSetlists} />,
+    );
+    await waitFor(() => expect(setlistRows(container)).toHaveLength(3));
+    mockRowRects(container);
+
+    pickUp(setlistDragHandles(container)[1]);
+    moveTo(setlistRows(container)[1], topOf(1));
+    release(setlistRows(container)[1], topOf(1));
+    expect(onReorderSetlists).not.toHaveBeenCalled();
+
+    pickUp(setlistDragHandles(container)[1]);
+    moveTo(setlistRows(container)[1], bottomOf(1));
+    release(setlistRows(container)[1], bottomOf(1));
+    expect(onReorderSetlists).not.toHaveBeenCalled();
+  });
+
+  it("does not load the setlist just from grabbing its handle", async () => {
+    setInvokeResponse("list_presets", () => []);
+    const onLoadSetlist = vi.fn();
+    const { container } = render(
+      <PresetSidebar {...baseProps} view="setlist" setlists={three()} onLoadSetlist={onLoadSetlist} />,
+    );
+    await waitFor(() => expect(setlistRows(container)).toHaveLength(3));
+    fireEvent.click(setlistDragHandles(container)[1]);
+    expect(onLoadSetlist).not.toHaveBeenCalled();
+  });
+
+  it("hides the handle while a search filters the list — a gap into a filtered subset has no unambiguous place in the real order", async () => {
+    setInvokeResponse("list_presets", () => []);
+    const { container } = render(<PresetSidebar {...baseProps} view="setlist" setlists={three()} />);
+    await waitFor(() => expect(setlistRows(container)).toHaveLength(3));
+    const search = await openSearch();
+    fireEvent.change(search, { target: { value: "scales" } });
+    await waitFor(() => expect(setlistRows(container)).toHaveLength(1));
+    expect(setlistDragHandles(container)).toHaveLength(0);
+  });
+});
+
 describe("PresetSidebar", () => {
   it("renders 'No presets yet' when listPresets returns []", async () => {
     setInvokeResponse("list_presets", () => []);
@@ -240,6 +396,32 @@ describe("PresetSidebar", () => {
     expect(screen.queryByText("Slow Blues")).toBeNull();
     expect(container.querySelector(".preset-sidebar-add")).toBeNull();
     expect(container.querySelector(".preset-sidebar-title")?.textContent).toBe("Setlists");
+  });
+
+  it("offers Duplicate on a setlist's right-click menu", async () => {
+    // duplicateSetlist (setlist/setlists.ts) existed with no caller until
+    // this — the pure function was there, nothing in the UI reached it.
+    setInvokeResponse("list_presets", () => []);
+    const onDuplicateSetlist = vi.fn();
+    const { container } = render(
+      <PresetSidebar
+        {...baseProps}
+        view="setlist"
+        setlists={[makeSetlist()]}
+        onDuplicateSetlist={onDuplicateSetlist}
+      />,
+    );
+    const row = await waitFor(() => {
+      const el = container.querySelector(".setlist-item");
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    fireEvent.contextMenu(row);
+    const duplicateBtn = await screen.findByText("Duplicate setlist");
+    fireEvent.click(duplicateBtn);
+    expect(onDuplicateSetlist).toHaveBeenCalledWith("ch1");
+    // The menu closes behind it.
+    expect(screen.queryByText("Duplicate setlist")).toBeNull();
   });
 
   it("keeps setlists off every other tab's library", async () => {
