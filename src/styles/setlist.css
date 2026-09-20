@@ -71,6 +71,86 @@
   margin: 8px 11px;
 }
 
+/* Drag-to-reorder for the library's own setlist rows — same mechanism as
+   the step reorder above (mousedown on a handle, then window mousemove/
+   mouseup; see SetlistParagraph.tsx for why native dragover is unusable
+   here), reusing the same `.setlist-reordering` body class for the cursor
+   override. Kept as its own set of classes rather than sharing the step
+   ones because the row shape differs (column layout, a `.setlist-item-row`
+   wrapper) even though the drag logic is identical. */
+.setlist-item-drag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  flex: none;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.preset-sidebar-item.setlist-item:hover .setlist-item-drag,
+.preset-sidebar-item.setlist-item.active .setlist-item-drag,
+.preset-sidebar-item.setlist-item:focus-within .setlist-item-drag {
+  opacity: 1;
+}
+
+.setlist-item-drag:hover {
+  color: var(--text-primary);
+}
+
+.setlist-item-drag:active {
+  cursor: grabbing;
+}
+
+/* The row being picked up. Faded rather than hidden, so the list does not
+   jump while you decide where it goes. */
+.preset-sidebar-item.setlist-item.dragging {
+  opacity: 0.45;
+}
+
+/* The insertion line for one of the `setlistList.length + 1` gaps a drag
+   can land in. A child of the row it sits above, absolutely positioned
+   over its top edge — `.preset-sidebar-item` is already `position:
+   relative`. `pointer-events: none` so it never itself becomes the
+   drag/drop target it is only there to announce. */
+.setlist-item-dropline {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  opacity: 0;
+  box-shadow: 0 0 8px var(--accent-glow, transparent);
+  transition: opacity 0.1s ease;
+  pointer-events: none;
+}
+
+.setlist-item-dropline[data-active] {
+  opacity: 1;
+}
+
+.preset-sidebar-item.setlist-item > .setlist-item-dropline {
+  top: -3px;
+}
+
+/* The last gap, after the final row — the one no row's own leading dropline
+   can stand for. A dedicated strip so it is a real drop target rather than
+   the last few pixels of the last row's bottom edge. */
+.setlist-item-end-zone {
+  position: relative;
+  height: 10px;
+}
+
+.setlist-item-end-zone .setlist-item-dropline {
+  top: 4px;
+}
+
 /* =================== The context bar's setlist badge =================== */
 
 .setlist-badge {

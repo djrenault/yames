@@ -33,6 +33,7 @@ interface PresetSidebarProps {
   onDeleteSetlist?: (id: string) => void;
   onRenameSetlist?: (id: string, name: string) => void;
   onDuplicateSetlist?: (id: string) => void;
+  onReorderSetlists?: (ids: string[]) => void;
 }
 
 function generateId(): string {
@@ -126,6 +127,20 @@ function presetSummary(preset: Preset, t: (key: string) => string): string {
   return `${preset.bpm} · ${meter}`;
 }
 
+/** Six dots — the drag-handle glyph every list-reorder UI already teaches. */
+function GripIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="9" cy="6" r="1.6" />
+      <circle cx="9" cy="12" r="1.6" />
+      <circle cx="9" cy="18" r="1.6" />
+      <circle cx="15" cy="6" r="1.6" />
+      <circle cx="15" cy="12" r="1.6" />
+      <circle cx="15" cy="18" r="1.6" />
+    </svg>
+  );
+}
+
 export const PresetSidebar = forwardRef<PresetSidebarHandle, PresetSidebarProps>(function PresetSidebar({
   state,
   view,
@@ -140,6 +155,7 @@ export const PresetSidebar = forwardRef<PresetSidebarHandle, PresetSidebarProps>
   onDeleteSetlist,
   onRenameSetlist,
   onDuplicateSetlist,
+  onReorderSetlists,
 }, ref) {
   const [allPresets, setAllPresets] = useState<Preset[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -168,6 +184,24 @@ export const PresetSidebar = forwardRef<PresetSidebarHandle, PresetSidebarProps>
   const renameRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const contextRef = useRef<HTMLDivElement>(null);
+  const setlistListRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Drag-to-reorder for the sidebar's setlist rows — same mechanism and
+   * same reasons as SetlistParagraph's step reorder: plain `mousedown` on a
+   * handle, then `window` `mousemove`/`mouseup` for the rest of the
+   * gesture, because native HTML5 `dragover` only fires a handful of times
+   * a second rather than on every pixel of motion. `dragIndex` is the row
+   * being picked up; `dropGap` is which of the `setlistList.length + 1`
+   * gaps the pointer is over right now.
+   *
+   * Disabled while a search filters the list: a gap index into the
+   * filtered rows does not correspond to a position in the real order, and
+   * there is no unambiguous place a reorder issued against a subset should
+   * land in the full list.
+   */
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropGap, setDropGap] = useState<number | null>(null);
 
   // Load presets on mount
   useEffect(() => {
@@ -380,6 +414,56 @@ export const PresetSidebar = forwardRef<PresetSidebarHandle, PresetSidebarProps>
         ? setlists!.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
         : setlists!)
     : [];
+  const canReorderSetlists = showSetlists && !search.trim();
+
+  useEffect(() => {
+    if (dragIndex === null) return;
+    document.body.classList.add("setlist-reordering");
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+
+    const gapFromPoint = (clientY: number): number => {
+      const rows = [...(setlistListRef.current?.querySelectorAll<HTMLElement>(".setlist-item") ?? [])];
+      for (let i = 0; i < rows.length; i++) {
+        const rect = rows[i].getBoundingClientRect();
+        if (clientY < rect.top + rect.height / 2) return i;
+      }
+      return rows.length;
+    };
+
+    const onMove = (e: MouseEvent) => {
+      const gap = gapFromPoint(e.clientY);
+      setDropGap((current) => (current === gap ? current : gap));
+    };
+    const onUp = (e: MouseEvent) => {
+      const gap = gapFromPoint(e.clientY);
+      setDragIndex((from) => {
+        if (from === null) return null;
+        const to = gap <= from ? gap : gap - 1;
+        if (to !== from) {
+          const ids = setlistList.map((c) => c.id);
+          const [moved] = ids.splice(from, 1);
+          ids.splice(to, 0, moved);
+          onReorderSetlists?.(ids);
+        }
+        return null;
+      });
+      setDropGap(null);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp, { once: true });
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.classList.remove("setlist-reordering");
+      document.body.style.userSelect = previousUserSelect;
+    };
+    // `setlistList`/`onReorderSetlists` are read fresh via the closure
+    // captured when the drag STARTS (dragIndex flips from null) — see
+    // SetlistParagraph's identical reorder effect for why re-running this
+    // over every unrelated render would be wrong.
+  }, [dragIndex]);
 
   return (
     <>
@@ -500,14 +584,14 @@ export const PresetSidebar = forwardRef<PresetSidebarHandle, PresetSidebarProps>
         </div>
         )}
 
-        <div className="preset-sidebar-list">
+        <div className="preset-sidebar-list" ref={setlistListRef}>
           {/* Setlists sit above the presets and above the rule that separates
               them: they are the bigger thing, and a list that opened with
               four presets would bury them. */}
-          {setlistList.map((c) => (
+          {setlistList.map((c, index) => (
             <div
               key={c.id}
-              className={`preset-sidebar-item setlist-item ${activeSetlistId === c.id ? "active" : ""}`}
+              className={`preset-sidebar-item setlist-item ${activeSetlistId === c.id ? "active" : ""}${dragIndex === index ? " dragging" : ""}`}
               role="button"
               tabIndex={0}
               onClick={() => onLoadSetlist?.(c)}
@@ -522,6 +606,12 @@ export const PresetSidebar = forwardRef<PresetSidebarHandle, PresetSidebarProps>
                 setSetlistMenu({ id: c.id, x: e.clientX, y: e.clientY });
               }}
             >
+              {canReorderSetlists && (
+                <div
+                  className="setlist-item-dropline"
+                  data-active={dragIndex !== null && dropGap === index ? "" : undefined}
+                />
+              )}
               {renamingSetlist === c.id ? (
                 <input
                   ref={renameRef}
@@ -548,6 +638,24 @@ export const PresetSidebar = forwardRef<PresetSidebarHandle, PresetSidebarProps>
               ) : (
                 <>
                   <span className="setlist-item-row">
+                    {canReorderSetlists && (
+                      <button
+                        type="button"
+                        className="setlist-item-drag"
+                        aria-hidden="true"
+                        tabIndex={-1}
+                        title={t("setlist.dragToReorder")}
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => {
+                          if (e.button !== 0) return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDragIndex(index);
+                        }}
+                      >
+                        <GripIcon />
+                      </button>
+                    )}
                     <span className="setlist-item-glyph">{setlistIcon}</span>
                     <span className="preset-item-name">{c.name}</span>
                   </span>
@@ -558,6 +666,14 @@ export const PresetSidebar = forwardRef<PresetSidebarHandle, PresetSidebarProps>
               )}
             </div>
           ))}
+          {canReorderSetlists && setlistList.length > 0 && (
+            <div className="setlist-item-end-zone">
+              <div
+                className="setlist-item-dropline"
+                data-active={dragIndex !== null && dropGap === setlistList.length ? "" : undefined}
+              />
+            </div>
+          )}
           {/* The rule separates setlists from presets; on the setlist tab
               there are no presets under it to separate. */}
           {setlistList.length > 0 && !showSetlists && (

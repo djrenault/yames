@@ -410,6 +410,45 @@ describe("useSetlistSession", () => {
     });
   });
 
+  describe("reorderSetlists", () => {
+    it("puts the local list in the given order (the sidebar's drag-to-reorder)", async () => {
+      const { result } = mount();
+      await act(async () => {
+        result.current.loadSetlist(CHAIN);
+      });
+      await act(async () => {
+        await result.current.saveActiveSetlist();
+      });
+      await act(async () => {
+        await result.current.duplicateSetlist(CHAIN.id);
+      });
+      expect(result.current.setlists).toHaveLength(2);
+      const ids = result.current.setlists.map((c) => c.id).reverse();
+
+      act(() => {
+        result.current.reorderSetlists(ids);
+      });
+      expect(result.current.setlists.map((c) => c.id)).toEqual(ids);
+    });
+
+    it("leaves the list untouched when the given order drops a setlist", async () => {
+      // Same guard `reorderSetlists` (ipc.ts) itself carries: a reorder
+      // issued against a stale list must not silently drop one.
+      const { result } = mount();
+      await act(async () => {
+        result.current.loadSetlist(CHAIN);
+      });
+      await act(async () => {
+        await result.current.saveActiveSetlist();
+      });
+
+      act(() => {
+        result.current.reorderSetlists(["no-such-id"]);
+      });
+      expect(result.current.setlists.map((c) => c.id)).toEqual([CHAIN.id]);
+    });
+  });
+
   it("closing the setlist leaves nothing behind for the preset to fight with", async () => {
     const { result } = mount();
     await act(async () => {

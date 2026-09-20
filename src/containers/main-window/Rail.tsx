@@ -26,6 +26,7 @@ interface RailProps {
   onDeleteSetlist: (id: string) => void;
   onRenameSetlist: (id: string, name: string) => void;
   onDuplicateSetlist: (id: string) => void;
+  onReorderSetlists: (ids: string[]) => void;
   coachOpen: boolean;
   coachActive: boolean;
   coachListening: boolean;
@@ -109,6 +110,7 @@ export const Rail = forwardRef<PresetSidebarHandle, RailProps>(function Rail(
     onDeleteSetlist,
     onRenameSetlist,
     onDuplicateSetlist,
+    onReorderSetlists,
     coachOpen,
     coachActive,
     coachListening,
@@ -187,6 +189,7 @@ export const Rail = forwardRef<PresetSidebarHandle, RailProps>(function Rail(
             onDeleteSetlist={onDeleteSetlist}
             onRenameSetlist={onRenameSetlist}
             onDuplicateSetlist={onDuplicateSetlist}
+            onReorderSetlists={onReorderSetlists}
           />
         )}
       </div>

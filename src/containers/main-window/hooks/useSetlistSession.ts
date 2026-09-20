@@ -12,6 +12,7 @@ import {
 import {
   deleteSetlist as deleteSetlistIpc,
   listSetlists,
+  reorderSetlists as reorderSetlistsIpc,
   saveSetlist as saveSetlistIpc,
 } from "../../../ipc";
 import { meterKey } from "../../../utils/meter";
@@ -324,6 +325,23 @@ export function useSetlistSession({
   );
 
   /**
+   * The sidebar's own drag-to-reorder (distinct from `reorderSteps`, which
+   * reorders a setlist's STEPS): `ids` is the library's rows in their new
+   * order. Applied to local state immediately, same as every other setlist
+   * edit here, then persisted — `reorderSetlistsIpc` re-reads the store
+   * itself rather than taking a full array, so a reorder issued against a
+   * stale `setlists` cannot silently drop one saved from another window.
+   */
+  const reorderSetlists = useCallback((ids: string[]) => {
+    setSetlists((prev) => {
+      const byId = new Map(prev.map((c) => [c.id, c]));
+      const ordered = ids.map((id) => byId.get(id)).filter((c): c is Setlist => !!c);
+      return ordered.length === prev.length ? ordered : prev;
+    });
+    reorderSetlistsIpc(ids).catch(() => {});
+  }, []);
+
+  /**
    * A whole new setlist, with its own copy of every step (U9's `duplicateSetlist`
    * had no caller until now). Persisted immediately, like `newSetlist` — there
    * is no working copy to save later, since this isn't the one you have open.
@@ -448,6 +466,7 @@ export function useSetlistSession({
     deleteSetlist,
     renameSetlist,
     duplicateSetlist,
+    reorderSetlists,
     addStepFromNow,
     addToSetlist,
     addToNewSetlist,
